@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Alert, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, Text, View } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ConnectionBanner } from "../components/ConnectionBanner";
 import { Field, PrimaryButton, ScreenShell } from "../components/Ui";
@@ -22,13 +22,15 @@ export function RegisterScreen({ navigation }: Props) {
     password: "",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const update = (key: keyof typeof form, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
   const onSubmit = async () => {
+    setErrorMessage(null);
     if (state !== "online") {
-      Alert.alert("Server unavailable", "Connect to the backend before registering.");
+      setErrorMessage("Backend is not connected. Start backend/start.ps1 in another terminal.");
       return;
     }
     setSubmitting(true);
@@ -38,7 +40,9 @@ export function RegisterScreen({ navigation }: Props) {
         vtu_id: form.vtu_id.trim().toUpperCase(),
       });
     } catch (error) {
-      Alert.alert("Registration failed", error instanceof ApiError ? error.message : "Try again.");
+      const message = error instanceof ApiError ? error.message : "Try again.";
+      setErrorMessage(message);
+      Alert.alert("Registration failed", message);
     } finally {
       setSubmitting(false);
     }
@@ -55,6 +59,7 @@ export function RegisterScreen({ navigation }: Props) {
           <Field label="College email" value={form.email} onChangeText={(v) => update("email", v)} placeholder="you@college.edu" />
           <Field label="Phone (private until consent)" value={form.phone} onChangeText={(v) => update("phone", v)} placeholder="10-digit mobile" />
           <Field label="Password" value={form.password} onChangeText={(v) => update("password", v)} secureTextEntry />
+          {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
           <PrimaryButton label={submitting ? "Creating..." : "Create account"} onPress={onSubmit} disabled={submitting} />
         </ScreenShell>
       </ScrollView>
@@ -62,4 +67,11 @@ export function RegisterScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({ root: { flex: 1 } });
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+  error: {
+    color: "#D64545",
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+});

@@ -1,20 +1,8 @@
-import * as SecureStore from "expo-secure-store";
 import { apiRequest } from "../api/client";
+import { clearToken, getToken, saveToken } from "../lib/tokenStorage";
 import type { Claim, Item, MatchResult, User } from "../types";
 
-const TOKEN_KEY = "fyt_token";
-
-export async function saveToken(token: string) {
-  await SecureStore.setItemAsync(TOKEN_KEY, token);
-}
-
-export async function getToken() {
-  return SecureStore.getItemAsync(TOKEN_KEY);
-}
-
-export async function clearToken() {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
-}
+export { clearToken, getToken, saveToken };
 
 export async function registerUser(payload: {
   vtu_id: string;
