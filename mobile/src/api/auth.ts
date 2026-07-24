@@ -25,6 +25,13 @@ export async function loginUser(vtu_id: string, password: string) {
   });
 }
 
+export async function refreshSession(token: string) {
+  return apiRequest<{ access_token: string; user: User }>("/api/auth/refresh", {
+    method: "POST",
+    token,
+  });
+}
+
 export async function fetchMe(token: string) {
   return apiRequest<User>("/api/auth/me", { token });
 }
@@ -37,8 +44,14 @@ export async function fetchMetadata(token: string) {
   }>("/api/items/meta", { token });
 }
 
-export async function fetchItems(token: string, itemType?: "lost" | "found") {
-  const query = itemType ? `?item_type=${itemType}` : "";
+export async function fetchItems(
+  token: string,
+  options?: { itemType?: "lost" | "found"; mine?: boolean },
+) {
+  const params = new URLSearchParams();
+  if (options?.itemType) params.set("item_type", options.itemType);
+  if (options?.mine) params.set("mine", "true");
+  const query = params.toString() ? `?${params.toString()}` : "";
   return apiRequest<Item[]>(`/api/items${query}`, { token });
 }
 
@@ -67,8 +80,29 @@ export async function createClaim(token: string, matchId: number, message: strin
   });
 }
 
+export async function claimAgainstFound(
+  token: string,
+  foundItemId: number,
+  lostItemId: number,
+  message?: string,
+) {
+  return apiRequest<Claim>("/api/claims/against-found", {
+    method: "POST",
+    token,
+    body: {
+      found_item_id: foundItemId,
+      lost_item_id: lostItemId,
+      message: message ?? "I saw this on the campus found feed and believe it is mine.",
+    },
+  });
+}
+
 export async function fetchIncomingClaims(token: string) {
   return apiRequest<Claim[]>("/api/claims/incoming", { token });
+}
+
+export async function fetchMyClaims(token: string) {
+  return apiRequest<Claim[]>("/api/claims/mine", { token });
 }
 
 export async function respondClaim(token: string, claimId: number, accept: boolean) {
@@ -76,5 +110,19 @@ export async function respondClaim(token: string, claimId: number, accept: boole
     method: "POST",
     token,
     body: { accept },
+  });
+}
+
+export async function reportClaimMismatch(token: string, claimId: number) {
+  return apiRequest<Claim>(`/api/claims/${claimId}/mismatch`, {
+    method: "POST",
+    token,
+  });
+}
+
+export async function confirmClaimRecovered(token: string, claimId: number) {
+  return apiRequest<Claim>(`/api/claims/${claimId}/confirm-recovered`, {
+    method: "POST",
+    token,
   });
 }

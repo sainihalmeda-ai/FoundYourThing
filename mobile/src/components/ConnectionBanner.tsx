@@ -4,24 +4,42 @@ import { useConnection } from "../context/ConnectionContext";
 import { COLORS } from "../constants/config";
 
 export function ConnectionBanner() {
-  const { state, message, refresh } = useConnection();
+  const { state, message, refresh, dismissSlow } = useConnection();
 
   if (state === "online" || state === "checking") {
     return null;
   }
 
   const background =
-    state === "offline" ? COLORS.offline : state === "server_down" ? COLORS.danger : COLORS.warning;
+    state === "offline"
+      ? COLORS.offline
+      : state === "server_down"
+        ? COLORS.danger
+        : state === "slow"
+          ? COLORS.warning
+          : COLORS.warning;
+
+  const title =
+    state === "offline"
+      ? "You are offline"
+      : state === "server_down"
+        ? "Server unavailable"
+        : "Slow network";
 
   return (
     <View style={[styles.banner, { backgroundColor: background }]}>
-      <Text style={styles.title}>
-        {state === "offline" ? "You are offline" : "Server unavailable"}
-      </Text>
+      <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
-      <Pressable style={styles.button} onPress={refresh}>
-        <Text style={styles.buttonText}>Retry connection</Text>
-      </Pressable>
+      <View style={styles.row}>
+        <Pressable style={styles.button} onPress={refresh}>
+          <Text style={styles.buttonText}>Retry connection</Text>
+        </Pressable>
+        {state === "slow" ? (
+          <Pressable style={styles.button} onPress={dismissSlow}>
+            <Text style={styles.buttonText}>Dismiss</Text>
+          </Pressable>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -42,8 +60,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
   },
-  button: {
+  row: {
+    flexDirection: "row",
+    gap: 8,
     marginTop: 8,
+  },
+  button: {
     alignSelf: "flex-start",
     backgroundColor: "rgba(255,255,255,0.2)",
     paddingHorizontal: 12,

@@ -2,18 +2,18 @@ import React from "react";
 import { View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { ClaimNoticeHost } from "../components/ClaimNoticeHost";
 import { LoadingOverlay } from "../components/LoadingOverlay";
+import { SessionBanner } from "../components/SessionBanner";
+import { SessionExpiringModal } from "../components/SessionExpiringModal";
 import { useAuth } from "../context/AuthContext";
-import { ClaimsScreen } from "../screens/ClaimsScreen";
-import { FeedScreen } from "../screens/FeedScreen";
-import { HomeScreen } from "../screens/HomeScreen";
-import { ItemDetailScreen } from "../screens/ItemDetailScreen";
 import { LoginScreen } from "../screens/LoginScreen";
 import { RegisterScreen } from "../screens/RegisterScreen";
-import { ReportScreen } from "../screens/ReportScreen";
+import { AppStack } from "./AppStack";
+import { navigationRef } from "./navigationRef";
 import { RootStackParamList } from "./types";
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+const AuthStack = createNativeStackNavigator<RootStackParamList>();
 
 export function AppNavigator() {
   const { token, loading } = useAuth();
@@ -23,24 +23,21 @@ export function AppNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <View style={{ flex: 1 }}>
-        <Stack.Navigator screenOptions={{ headerShown: true }}>
-          {token ? (
-            <>
-              <Stack.Screen name="Home" component={HomeScreen} options={{ title: "FoundYourThing" }} />
-              <Stack.Screen name="Report" component={ReportScreen} options={{ title: "New report" }} />
-              <Stack.Screen name="Feed" component={FeedScreen} />
-              <Stack.Screen name="ItemDetail" component={ItemDetailScreen} options={{ title: "Item details" }} />
-              <Stack.Screen name="Claims" component={ClaimsScreen} />
-            </>
-          ) : (
-            <>
-              <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-              <Stack.Screen name="Register" component={RegisterScreen} options={{ title: "Register" }} />
-            </>
-          )}
-        </Stack.Navigator>
+        {token ? <SessionBanner /> : null}
+        {token ? (
+          <>
+            <AppStack />
+            <ClaimNoticeHost />
+            <SessionExpiringModal />
+          </>
+        ) : (
+          <AuthStack.Navigator>
+            <AuthStack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+            <AuthStack.Screen name="Register" component={RegisterScreen} options={{ title: "Register" }} />
+          </AuthStack.Navigator>
+        )}
       </View>
     </NavigationContainer>
   );

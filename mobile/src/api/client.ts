@@ -12,6 +12,26 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function formatApiErrorMessage(raw: unknown): string {
+  if (typeof raw === "string") return raw;
+  if (Array.isArray(raw)) {
+    return raw
+      .map((item) => {
+        if (item && typeof item === "object" && "msg" in item) {
+          const loc = Array.isArray((item as { loc?: unknown }).loc)
+            ? (item as { loc: unknown[] }).loc.join(".")
+            : "";
+          const msg = String((item as { msg: unknown }).msg);
+          return loc ? `${loc}: ${msg}` : msg;
+        }
+        return JSON.stringify(item);
+      })
+      .join("\n");
+  }
+  if (raw && typeof raw === "object") return JSON.stringify(raw);
+  return "Something went wrong on the server.";
+}
+
 export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
@@ -19,7 +39,7 @@ export async function apiRequest<T>(
   const { method = "GET", token, body, retries = MAX_RETRIES } = options;
   const headers: Record<string, string> = {};
   if (token) headers.Authorization = `Bearer ${token}`;
-  if (body && !(body instanceof FormData)) {
+  if (body && !(body instanceof FormData) && !(typeof FormData !== "undefined" && Object.prototype.toString.call(body) === "[object FormData]")) {
     headers["Content-Type"] = "application/json";
   }
 
@@ -34,8 +54,9 @@ export async function apiRequest<T>(
         method,
         headers,
         body:
-          body instanceof FormData
-            ? body
+          body instanceof FormData ||
+          (body != null && Object.prototype.toString.call(body) === "[object FormData]")
+            ? (body as FormData)
             : body
               ? JSON.stringify(body)
               : undefined,
@@ -48,21 +69,26 @@ export async function apiRequest<T>(
         ? await response.json()
         : null;
 
-      if (response.status === 401) {
-        throw new ApiError(
-          "Your session expired. Please log in again.",
-          "unauthorized",
-          401,
-        );
-      }
-
       if (!response.ok) {
-        const message =
+        const raw =
           payload?.detail ??
           payload?.message ??
           "Something went wrong on the server.";
+        const message = formatApiErrorMessage(raw);
+
+        if (response.status === 401) {
+          // Login/register failures are 401 too — keep the server message.
+          // Only treat authenticated requests as a true session expiry.
+          const kind = token ? "unauthorized" : "validation";
+          const text =
+            kind === "unauthorized" && !message.toLowerCase().includes("invalid")
+              ? "Your session expired. Please log in again."
+              : message;
+          throw new ApiError(text, kind, 401);
+        }
+
         throw new ApiError(
-          typeof message === "string" ? message : JSON.stringify(message),
+          message,
           response.status >= 500 ? "server" : "validation",
           response.status,
         );

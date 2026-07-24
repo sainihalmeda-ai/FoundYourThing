@@ -1,39 +1,51 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ConnectionBanner } from "../components/ConnectionBanner";
+import { ConnectionGate } from "../components/ConnectionGate";
 import { PrimaryButton, ScreenShell, SecondaryButton } from "../components/Ui";
 import { useAuth } from "../context/AuthContext";
 import { RootStackParamList } from "../navigation/types";
 import { COLORS } from "../constants/config";
 
-type Props = NativeStackScreenProps<RootStackParamList, "Home">;
-
-export function HomeScreen({ navigation }: Props) {
+export function HomeScreen() {
   const { user, logout } = useAuth();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   return (
-    <View style={styles.root}>
-      <ConnectionBanner />
-      <ScreenShell
-        title="FoundYourThing"
-        subtitle="Campus lost & found for valuable items only. Privacy first: only VTU IDs are public until both sides agree to share contact."
-      >
-        <View style={styles.card}>
-          <Text style={styles.welcome}>Signed in as {user?.vtu_id}</Text>
-          <Text style={styles.note}>
-            Pens and pencils are not accepted. Report phones, watches, wallets, ID cards, bags, and other valuables.
-          </Text>
-        </View>
+    <ConnectionGate>
+      <View style={styles.root}>
+        <ConnectionBanner />
+        <ScreenShell
+          title="FoundYourThing"
+          subtitle="Campus lost & found for valuable items only. Privacy first: only VTU IDs are public until both sides agree to share contact."
+        >
+          <View style={styles.card}>
+            <Text style={styles.welcome}>Signed in as {user?.vtu_id}</Text>
+            <Text style={styles.note}>
+              Pens and pencils are not accepted. Report phones, watches, wallets, ID cards, bags, and other valuables.
+            </Text>
+          </View>
 
-        <PrimaryButton label="I lost something" onPress={() => navigation.navigate("Report", { mode: "lost" })} />
-        <View style={styles.gap} />
-        <PrimaryButton label="I found something" onPress={() => navigation.navigate("Report", { mode: "found" })} />
-        <SecondaryButton label="Browse campus feed" onPress={() => navigation.navigate("Feed")} />
-        <SecondaryButton label="Incoming contact requests" onPress={() => navigation.navigate("Claims")} />
-        <SecondaryButton label="Log out" onPress={logout} />
-      </ScreenShell>
-    </View>
+          <PrimaryButton
+            label="I lost something"
+            onPress={() => navigation.navigate("Report", { mode: "lost" })}
+          />
+          <View style={styles.gap} />
+          <PrimaryButton
+            label="I found something"
+            onPress={() => navigation.navigate("Report", { mode: "found" })}
+          />
+          <SecondaryButton label="Browse campus feed" onPress={() => navigation.navigate("Feed")} />
+          <SecondaryButton
+            label="Incoming contact requests"
+            onPress={() => navigation.navigate("Claims")}
+          />
+          <SecondaryButton label="Log out" onPress={logout} />
+        </ScreenShell>
+      </View>
+    </ConnectionGate>
   );
 }
 

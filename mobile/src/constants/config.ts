@@ -18,3 +18,8 @@ export const API_BASE_URL =
 
 export const REQUEST_TIMEOUT_MS = 15000;
 export const MAX_RETRIES = 2;
+
+/** Client session length — must match backend ACCESS_TOKEN_EXPIRE_MINUTES. */
+export const SESSION_DURATION_MS = 10 * 60 * 1000;
+/** Show continue/proceed modal when this much time remains. */
+export const SESSION_WARN_MS = 60 * 1000;

@@ -8,6 +8,7 @@ import {
   ViewStyle,
 } from "react-native";
 import { COLORS } from "../constants/config";
+import { ValidationMessage } from "./states/ValidationMessage";
 
 export function PrimaryButton({
   label,
@@ -50,6 +51,7 @@ export function Field({
   placeholder,
   secureTextEntry,
   autoCapitalize = "none",
+  error,
 }: {
   label: string;
   value: string;
@@ -57,12 +59,13 @@ export function Field({
   placeholder?: string;
   secureTextEntry?: boolean;
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
+  error?: string | null;
 }) {
   return (
     <View style={styles.fieldWrap}>
       <Text style={styles.label}>{label}</Text>
       <TextInput
-        style={styles.input}
+        style={[styles.input, error ? styles.inputError : null]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -70,6 +73,7 @@ export function Field({
         secureTextEntry={secureTextEntry}
         autoCapitalize={autoCapitalize}
       />
+      <ValidationMessage message={error} field />
     </View>
   );
 }
@@ -140,6 +144,9 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     color: COLORS.text,
+  },
+  inputError: {
+    borderColor: COLORS.danger,
   },
   screen: {
     flex: 1,

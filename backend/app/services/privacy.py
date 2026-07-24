@@ -1,5 +1,5 @@
 from app.constants import DISCLOSURE_CLAIM, DISCLOSURE_CONNECTED, DISCLOSURE_MATCH, DISCLOSURE_PUBLIC
-from app.models import ClaimRequest, ClaimStatus, Item, Match, User
+from app.models import ClaimRequest, ClaimStatus, Item, ItemStatus, Match, User
 
 
 def mask_name(full_name: str) -> str:
@@ -34,37 +34,82 @@ def user_public(user: User, disclosure: str) -> dict:
     return {"vtu_id": user.vtu_id}
 
 
+def _parties(claim: ClaimRequest) -> set[int]:
+    return {claim.claimer_id, claim.finder_id}
+
+
+def _return_completed(claim: ClaimRequest | None = None, item: Item | None = None) -> bool:
+    """True once the physical return is confirmed — phone must stay hidden again."""
+    if item is not None and item.status in {ItemStatus.RECOVERED, ItemStatus.CLOSED}:
+        return True
+    if claim is None or claim.match is None:
+        return False
+    lost = claim.match.lost_item
+    found = claim.match.found_item
+    return lost.status == ItemStatus.CLOSED or found.status == ItemStatus.RECOVERED
+
+
 def disclosure_for_viewer(item: Item, viewer: User | None, claim: ClaimRequest | None) -> str:
-    if claim and claim.status == ClaimStatus.ACCEPTED and viewer and viewer.id in {
-        claim.claimer_id,
-        claim.finder_id,
-    }:
+    """Phone/name only after an *accepted* claim involving the viewer.
+
+    Rejected / cancelled deals and open reports never expose phone numbers —
+    including when the viewer owns the item (own contact stays off this screen).
+    After mark-returned, phone is revoked even if the claim stays accepted.
+    """
+    if not viewer:
+        return DISCLOSURE_PUBLIC
+
+    if _return_completed(claim, item):
+        if viewer.id == item.user_id or (claim and viewer.id in _parties(claim)):
+            return DISCLOSURE_MATCH
+        return DISCLOSURE_PUBLIC
+
+    if claim and claim.status in {ClaimStatus.REJECTED, ClaimStatus.CANCELLED}:
+        if viewer.id == item.user_id or viewer.id in _parties(claim):
+            return DISCLOSURE_MATCH
+        return DISCLOSURE_PUBLIC
+
+    if claim and claim.status == ClaimStatus.ACCEPTED and viewer.id in _parties(claim):
         return DISCLOSURE_CONNECTED
-    if claim and claim.status == ClaimStatus.PENDING and viewer and viewer.id in {
-        claim.claimer_id,
-        claim.finder_id,
-    }:
+
+    if claim and claim.status == ClaimStatus.PENDING and viewer.id in _parties(claim):
         return DISCLOSURE_CLAIM
-    if viewer and viewer.id == item.user_id:
-        return DISCLOSURE_CONNECTED
+
+    if viewer.id == item.user_id:
+        # Owner can see their report metadata, never phone on the public card.
+        return DISCLOSURE_MATCH
+
     return DISCLOSURE_PUBLIC
 
 
 def disclosure_for_match(viewer: User | None, match: Match, claim: ClaimRequest | None) -> str:
     if not viewer:
         return DISCLOSURE_PUBLIC
-    if claim and claim.status == ClaimStatus.ACCEPTED and viewer.id in {
-        claim.claimer_id,
-        claim.finder_id,
-    }:
+
+    if _return_completed(claim) or match.lost_item.status == ItemStatus.CLOSED or match.found_item.status == ItemStatus.RECOVERED:
+        if claim and viewer.id in _parties(claim):
+            return DISCLOSURE_MATCH
+        if viewer.id in {match.lost_item.user_id, match.found_item.user_id}:
+            return DISCLOSURE_MATCH
+        return DISCLOSURE_PUBLIC
+
+    if claim and claim.status in {ClaimStatus.REJECTED, ClaimStatus.CANCELLED}:
+        if viewer.id in _parties(claim) or viewer.id in {
+            match.lost_item.user_id,
+            match.found_item.user_id,
+        }:
+            return DISCLOSURE_MATCH
+        return DISCLOSURE_PUBLIC
+
+    if claim and claim.status == ClaimStatus.ACCEPTED and viewer.id in _parties(claim):
         return DISCLOSURE_CONNECTED
-    if claim and claim.status == ClaimStatus.PENDING and viewer.id in {
-        claim.claimer_id,
-        claim.finder_id,
-    }:
+
+    if claim and claim.status == ClaimStatus.PENDING and viewer.id in _parties(claim):
         return DISCLOSURE_CLAIM
+
     if viewer.id in {match.lost_item.user_id, match.found_item.user_id}:
         return DISCLOSURE_MATCH
+
     return DISCLOSURE_PUBLIC
 
 

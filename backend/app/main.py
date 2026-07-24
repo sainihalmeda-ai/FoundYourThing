@@ -6,11 +6,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
-from app.database import Base, engine
+from app.database import Base, SessionLocal, engine
 from app.routers import auth, claims, items
 from app.schemas import HealthResponse
+from app.services.refresh_scores import refresh_embeddings_and_scores
 
 Base.metadata.create_all(bind=engine)
+
+# Recompute visual fingerprints + match % after embedding upgrades.
+try:
+    with SessionLocal() as db:
+        refresh_embeddings_and_scores(db)
+except Exception:
+    pass
 
 app = FastAPI(
     title="FoundYourThing API",

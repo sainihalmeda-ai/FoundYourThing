@@ -63,6 +63,22 @@ def login_form(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     )
 
 
+@router.post("/refresh", response_model=TokenResponse)
+def refresh(current_user: User = Depends(get_current_user)):
+    """Extend the session by issuing a fresh access token."""
+    token = create_access_token(current_user.id)
+    return TokenResponse(
+        access_token=token,
+        user=UserPublic(
+            vtu_id=current_user.vtu_id,
+            department=current_user.department,
+            full_name=current_user.full_name,
+            phone=current_user.phone,
+            role=current_user.role,
+        ),
+    )
+
+
 @router.get("/me", response_model=UserPublic)
 def me(current_user: User = Depends(get_current_user)):
     return UserPublic(

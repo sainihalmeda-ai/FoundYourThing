@@ -32,6 +32,7 @@ export type MatchResult = {
   counterparty: User;
   counterparty_item: Item;
   claim_status?: string | null;
+  claim_id?: number | null;
 };
 
 export type Claim = {
@@ -68,4 +69,9 @@ export class ApiError extends Error {
   }
 }
 
-export type ConnectionState = "online" | "offline" | "checking" | "server_down";
+export type ConnectionState =
+  | "online"
+  | "offline"
+  | "checking"
+  | "server_down"
+  | "slow";

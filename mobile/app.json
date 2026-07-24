@@ -26,9 +26,11 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Allow FoundYourThing to take photos of lost or found valuable items."
+          "cameraPermission": "Allow FoundYourThing to take photos of lost or found valuable items.",
+          "photosPermission": "Allow FoundYourThing to choose photos of lost or found valuable items from your gallery."
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }

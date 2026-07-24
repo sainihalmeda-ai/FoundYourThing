@@ -30,13 +30,20 @@ def _hash_seed(text: str) -> np.ndarray:
 
 
 def image_embedding_from_bytes(content: bytes) -> list[float]:
+    """Build a compact visual fingerprint from the whole resized image.
+
+    Older code only used the first 64 pixels (top-left corner), which made
+    similar photos diverge. We now resize, flatten the full RGB grid, and
+    average-pool into EMBED_DIM so identical photos stay near cosine 1.0.
+    """
     image = Image.open(BytesIO(content)).convert("RGB")
-    image = image.resize((64, 64))
-    arr = np.asarray(image, dtype=np.float32).flatten()
-    if arr.size < EMBED_DIM:
-        arr = np.pad(arr, (0, EMBED_DIM - arr.size))
-    vec = _normalize(arr[:EMBED_DIM])
-    return vec.tolist()
+    image = image.resize((32, 32), Image.Resampling.BILINEAR)
+    flat = np.asarray(image, dtype=np.float32).flatten() / 255.0
+
+    chunk = int(np.ceil(flat.size / EMBED_DIM))
+    padded = np.pad(flat, (0, chunk * EMBED_DIM - flat.size))
+    vec = padded.reshape(EMBED_DIM, chunk).mean(axis=1)
+    return _normalize(vec).tolist()
 
 
 def text_embedding_from_string(text: str) -> list[float]:

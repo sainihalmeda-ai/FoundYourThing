@@ -98,6 +98,12 @@ class ClaimCreate(BaseModel):
     message: str = Field(default="", max_length=300)
 
 
+class ClaimAgainstFound(BaseModel):
+    found_item_id: int
+    lost_item_id: int
+    message: str = Field(default="", max_length=300)
+
+
 class ClaimRespond(BaseModel):
     accept: bool
 
