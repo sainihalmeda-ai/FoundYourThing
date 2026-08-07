@@ -1,0 +1,4 @@
+{
+  "install": "python3 -m venv backend/venv\nbackend/venv/bin/pip install -r backend/requirements.txt\nnpm install --prefix mobile\n[ -f backend/.env ] || cp backend/.env.example backend/.env\n[ -f mobile/.env ] || cp mobile/.env.example mobile/.env",
+  "start": "bash scripts/cloud-start.sh"
+}
