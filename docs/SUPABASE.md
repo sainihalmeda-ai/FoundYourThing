@@ -56,6 +56,23 @@ On startup, `Base.metadata.create_all` creates `users`, `items`, `matches`, and 
 
 This app talks to Postgres **only through FastAPI** with its own JWT. Do **not** open these tables to the Supabase anon key without RLS. Keep the Data API locked down or enable RLS that denies public access.
 
-## Photos
+## Photos (Supabase Storage)
 
-Item photos still live in `backend/uploads/` on the machine running FastAPI. Moving images to **Supabase Storage** is a separate step.
+On free Render, the API disk is wiped on restart — item rows stay in Postgres but `/uploads/...` files disappear (blue empty photo frames in the app).
+
+To keep photos:
+
+1. Supabase → **Project Settings → API** → copy **Project URL** and **service_role** key (secret).
+2. Set on the API host (Render env vars / local `.env`):
+
+```env
+SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=eyJ...
+SUPABASE_STORAGE_BUCKET=item-photos
+```
+
+3. Redeploy the API. New uploads create a public `item-photos` bucket and store files there; `image_url` becomes a Supabase CDN URL.
+
+Old reports whose files already vanished need a fresh photo (re-report) — Storage cannot recover deleted local files.
+
+Never put `service_role` in the mobile app.

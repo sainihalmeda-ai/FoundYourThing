@@ -7,6 +7,10 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 10
     cors_origins: str = "*"
     upload_dir: str = "./uploads"
+    # Optional: persist photos beyond Render's ephemeral disk (Dashboard → Settings → API).
+    supabase_url: str = ""
+    supabase_service_role_key: str = ""
+    supabase_storage_bucket: str = "item-photos"
     match_image_weight: float = 0.85
     match_text_weight: float = 0.15
     match_threshold: float = 0.55

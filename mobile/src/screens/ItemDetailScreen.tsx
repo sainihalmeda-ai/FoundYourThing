@@ -189,7 +189,12 @@ export function ItemDetailScreen({ route, navigation }: Props) {
       <View style={styles.root}>
         <ConnectionBanner />
         <ScrollView contentContainerStyle={styles.scroll}>
-          <PhotoView uri={resolveImageUrl(item.image_url)} style={styles.hero} />
+          <PhotoView
+            uri={resolveImageUrl(item.image_url)}
+            style={styles.hero}
+            fallbackLabel={item.title}
+            fallbackHint={`${item.category_label} · ${item.location} — identify from details below`}
+          />
           <View style={styles.sheet}>
             <View style={styles.badgeRow}>
               <Badge label={item.item_type === "lost" ? "Lost" : "Found"} tone={item.item_type} />

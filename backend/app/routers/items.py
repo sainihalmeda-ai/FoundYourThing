@@ -13,12 +13,10 @@ from app.services.embeddings import image_embedding_from_bytes, text_embedding_f
 from app.services.matching import find_matches_for_item, get_matches_for_item
 from app.services.photo_verify import verify_live_capture
 from app.services.privacy import serialize_item
+from app.services.storage import save_item_photo
 from app.schemas import ItemPublic
 
 router = APIRouter(prefix="/items", tags=["items"])
-
-UPLOAD_PATH = Path(settings.upload_dir)
-UPLOAD_PATH.mkdir(parents=True, exist_ok=True)
 
 ALLOWED_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/jpg"}
 
@@ -169,8 +167,10 @@ async def create_item(
 
     ext = Path(image.filename or "photo.jpg").suffix.lower() or ".jpg"
     filename = f"{uuid.uuid4().hex}{ext}"
-    file_path = UPLOAD_PATH / filename
-    file_path.write_bytes(content)
+    try:
+        save_item_photo(filename, content, image.content_type or "image/jpeg")
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
     text_blob = f"{category} {title} {description} {location}"
     item = Item(

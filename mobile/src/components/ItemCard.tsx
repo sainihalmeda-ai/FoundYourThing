@@ -38,6 +38,8 @@ export function ItemCard({
           uri={resolveImageUrl(item.image_url)}
           style={styles.image}
           expandable={false}
+          fallbackLabel={item.title}
+          fallbackHint={`${item.category_label} · ${item.location}`}
         />
         <View style={styles.badgeOverlay} pointerEvents="none">
           <Badge label={item.item_type === "lost" ? "Lost" : "Found"} tone={item.item_type} />

@@ -18,7 +18,10 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -38,8 +41,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": ""
+        "projectId": "c42fe662-06fd-4195-aa8e-1cf332b5cb2b"
       }
-    }
+    },
+    "owner": "meda_sai_nihal"
   }
 }

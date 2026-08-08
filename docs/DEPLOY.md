@@ -7,8 +7,8 @@
    - **Root directory:** `backend`
    - **Build:** `pip install -r requirements.txt`
    - **Start:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-3. Set env vars: `DATABASE_URL` (Supabase pooler), `SECRET_KEY` (long random), `UPLOAD_DIR=./uploads`, `CORS_ORIGINS=*`
-4. Free tier: uploads reset on redeploy. Paid: attach disk at `/var/data` and set `UPLOAD_DIR=/var/data/uploads`
+3. Set env vars: `DATABASE_URL` (Supabase pooler), `SECRET_KEY` (long random), `UPLOAD_DIR=./uploads`, `CORS_ORIGINS=*`, plus `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` so photos survive restarts (see [SUPABASE.md](SUPABASE.md)#photos-supabase-storage)
+4. Without Supabase Storage, free-tier uploads reset on redeploy. Paid alternative: attach a disk at `/var/data` and set `UPLOAD_DIR=/var/data/uploads`
 5. Health: `https://YOUR-SERVICE.onrender.com/api/health`
 
 ## Database (Supabase)

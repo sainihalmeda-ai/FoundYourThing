@@ -1,5 +1,6 @@
 from app.constants import DISCLOSURE_CLAIM, DISCLOSURE_CONNECTED, DISCLOSURE_MATCH, DISCLOSURE_PUBLIC
 from app.models import ClaimRequest, ClaimStatus, Item, ItemStatus, Match, User
+from app.services.storage import public_image_url
 
 
 def mask_name(full_name: str) -> str:
@@ -128,7 +129,7 @@ def serialize_item(item: Item, viewer: User | None, claim: ClaimRequest | None =
         "location": item.location,
         "status": item.status.value,
         "is_urgent": item.is_urgent,
-        "image_url": f"/uploads/{item.image_path}",
+        "image_url": public_image_url(item.image_path),
         "reporter_vtu_id": reporter.get("vtu_id"),
         "reporter_department": reporter.get("department"),
         "reporter_name": reporter.get("full_name"),
