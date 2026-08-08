@@ -16,31 +16,16 @@ import {
   type WebViewMessageEvent,
   type WebViewNavigation,
 } from "react-native-webview";
-import { COLORS, FONTS, WEB_APP_URL } from "../constants/config";
+import Constants from "expo-constants";
+import { COLORS, WEB_APP_URL } from "../constants/config";
 
 type Props = {
-  /** Production site the APK must load (Render static web). */
   url?: string;
 };
 
-const ALLOWED_HOSTS = new Set([
-  "foundyourthing-web.onrender.com",
-  "foundyourthing-api.onrender.com",
-  "expo.dev",
-  "u.expo.dev",
-]);
-
-function hostOf(raw: string): string | null {
-  try {
-    return new URL(raw).hostname.toLowerCase();
-  } catch {
-    return null;
-  }
-}
-
 /**
- * Android/iOS shell: load the deployed Expo web app inside a configured WebView.
- * Desktop/mobile browsers keep using the native RN-web tree instead.
+ * Load the live Render website. Keep navigation filtering minimal on Android —
+ * aggressive onShouldStartLoadWithRequest handlers commonly cause a blank WebView.
  */
 export function WebAppShell({ url = WEB_APP_URL }: Props) {
   const insets = useSafeAreaInsets();
@@ -49,6 +34,21 @@ export function WebAppShell({ url = WEB_APP_URL }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUrl, setLastUrl] = useState(url);
+  const version =
+    Constants.expoConfig?.version ?? Constants.nativeAppVersion ?? "?";
+
+  // Hard timeout so a hung load never looks like an endless blank screen.
+  useEffect(() => {
+    if (!loading || error) return;
+    const id = setTimeout(() => {
+      setLoading(false);
+      setError(
+        "The campus site is taking too long. Check mobile data/Wi‑Fi, then Retry. " +
+          "If this keeps happening, open FYT in Chrome instead.",
+      );
+    }, 45000);
+    return () => clearTimeout(id);
+  }, [loading, error]);
 
   useEffect(() => {
     if (Platform.OS !== "android") return;
@@ -64,11 +64,11 @@ export function WebAppShell({ url = WEB_APP_URL }: Props) {
 
   const onNavChange = useCallback((nav: WebViewNavigation) => {
     setCanGoBack(nav.canGoBack);
-    setLastUrl(nav.url);
+    if (nav.url) setLastUrl(nav.url);
   }, []);
 
   const onShouldStart = useCallback((req: { url: string }) => {
-    const { url: next } = req;
+    const next = req.url;
     if (
       next.startsWith("mailto:") ||
       next.startsWith("tel:") ||
@@ -77,26 +77,12 @@ export function WebAppShell({ url = WEB_APP_URL }: Props) {
       void Linking.openURL(next);
       return false;
     }
-    if (next.startsWith("about:") || next.startsWith("blob:") || next.startsWith("data:")) {
-      return true;
-    }
-    const host = hostOf(next);
-    if (!host) return false;
-    if (ALLOWED_HOSTS.has(host) || host.endsWith(".onrender.com") || host.endsWith(".expo.dev")) {
-      return true;
-    }
-    // Open unknown https links outside the app (OAuth, docs, etc.).
-    if (next.startsWith("https://") || next.startsWith("http://")) {
-      void Linking.openURL(next);
-      return false;
-    }
-    return false;
+    // Allow every normal navigation inside the WebView (required for SPA + assets).
+    return true;
   }, []);
 
   const onMessage = useCallback((event: WebViewMessageEvent) => {
-    if (__DEV__) {
-      console.log("[WebView]", event.nativeEvent.data);
-    }
+    if (__DEV__) console.log("[WebView]", event.nativeEvent.data);
   }, []);
 
   const reload = () => {
@@ -108,21 +94,22 @@ export function WebAppShell({ url = WEB_APP_URL }: Props) {
   return (
     <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <StatusBar style="dark" />
+      <View style={styles.badge}>
+        <Text style={styles.badgeText}>FYT {version} · WebView</Text>
+      </View>
+
       {error ? (
         <View style={styles.errorBox}>
-          <Text style={styles.errorTitle}>Couldn’t load FYT</Text>
+          <Text style={styles.errorTitle}>Couldn’t open FYT</Text>
           <Text style={styles.errorBody}>{error}</Text>
-          <Text style={styles.errorUrl} numberOfLines={2}>
+          <Text style={styles.errorUrl} numberOfLines={3}>
             {lastUrl}
           </Text>
           <Pressable style={styles.retry} onPress={reload}>
             <Text style={styles.retryText}>Retry</Text>
           </Pressable>
-          <Pressable
-            style={styles.openBrowser}
-            onPress={() => void Linking.openURL(url)}
-          >
-            <Text style={styles.openBrowserText}>Open in browser</Text>
+          <Pressable style={styles.openBrowser} onPress={() => void Linking.openURL(url)}>
+            <Text style={styles.openBrowserText}>Open in Chrome</Text>
           </Pressable>
         </View>
       ) : (
@@ -134,14 +121,16 @@ export function WebAppShell({ url = WEB_APP_URL }: Props) {
           domStorageEnabled
           sharedCookiesEnabled
           thirdPartyCookiesEnabled
-          cacheEnabled
+          cacheEnabled={false}
           allowsBackForwardNavigationGestures
           setSupportMultipleWindows={false}
           mediaPlaybackRequiresUserAction={false}
           allowsInlineMediaPlayback
-          mixedContentMode="never"
-          originWhitelist={["https://*", "http://*", "about:blank", "blob:*"]}
+          mixedContentMode="compatibility"
+          originWhitelist={["*"]}
           startInLoadingState
+          androidLayerType="hardware"
+          applicationNameForUserAgent="FYT-Android-WebView"
           onNavigationStateChange={onNavChange}
           onShouldStartLoadWithRequest={onShouldStart}
           onLoadStart={() => {
@@ -156,38 +145,20 @@ export function WebAppShell({ url = WEB_APP_URL }: Props) {
           onHttpError={(e) => {
             if (e.nativeEvent.statusCode >= 400) {
               setLoading(false);
-              setError(`HTTP ${e.nativeEvent.statusCode} loading campus site.`);
+              setError(`HTTP ${e.nativeEvent.statusCode} while loading the campus site.`);
             }
           }}
           onMessage={onMessage}
-          // Bridge console.error → React Native for debug builds.
-          injectedJavaScriptBeforeContentLoaded={`
-            (function(){
-              try {
-                var wrap = function(level){
-                  var orig = console[level];
-                  console[level] = function(){
-                    try {
-                      window.ReactNativeWebView && window.ReactNativeWebView.postMessage(
-                        level + ': ' + Array.prototype.slice.call(arguments).join(' ')
-                      );
-                    } catch (e) {}
-                    if (orig) orig.apply(console, arguments);
-                  };
-                };
-                wrap('log'); wrap('warn'); wrap('error');
-              } catch (e) {}
-              true;
-            })();
-          `}
           renderLoading={() => (
             <View style={styles.loading}>
               <ActivityIndicator size="large" color={COLORS.accent} />
-              <Text style={styles.loadingText}>Loading FYT…</Text>
+              <Text style={styles.loadingText}>Loading campus site…</Text>
+              <Text style={styles.loadingHint}>{url}</Text>
             </View>
           )}
         />
       )}
+
       {loading && !error ? (
         <View pointerEvents="none" style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color={COLORS.accent} />
@@ -198,64 +169,67 @@ export function WebAppShell({ url = WEB_APP_URL }: Props) {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.background },
-  webview: { flex: 1, backgroundColor: COLORS.background },
+  root: { flex: 1, backgroundColor: "#FFFFFF" },
+  badge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: "#102A56",
+  },
+  badgeText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 0.2,
+  },
+  webview: { flex: 1, backgroundColor: "#FFFFFF" },
   loading: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: COLORS.background,
-    gap: 12,
+    backgroundColor: "#FFFFFF",
+    gap: 10,
+    padding: 24,
   },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(244,245,247,0.55)",
+    backgroundColor: "rgba(255,255,255,0.35)",
   },
-  loadingText: {
-    fontFamily: FONTS.sansSemi,
-    color: COLORS.textMuted,
-    fontSize: 14,
-  },
+  loadingText: { color: "#111827", fontSize: 15, fontWeight: "600" },
+  loadingHint: { color: "#667085", fontSize: 11, textAlign: "center" },
   errorBox: {
     flex: 1,
     padding: 28,
     justifyContent: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: "#FFFFFF",
   },
   errorTitle: {
-    fontFamily: FONTS.display,
-    fontSize: 26,
-    color: COLORS.text,
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#111827",
     marginBottom: 10,
   },
   errorBody: {
-    fontFamily: FONTS.sans,
     fontSize: 14,
     lineHeight: 20,
-    color: COLORS.textMuted,
+    color: "#667085",
     marginBottom: 8,
   },
   errorUrl: {
-    fontFamily: FONTS.sansMedium,
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: "#667085",
     marginBottom: 20,
   },
   retry: {
     alignSelf: "flex-start",
-    backgroundColor: COLORS.primary,
+    backgroundColor: "#102A56",
     paddingHorizontal: 18,
     paddingVertical: 12,
     borderRadius: 999,
     marginBottom: 10,
   },
-  retryText: { color: "#fff", fontFamily: FONTS.sansBold, fontSize: 14 },
+  retryText: { color: "#fff", fontWeight: "700", fontSize: 14 },
   openBrowser: { alignSelf: "flex-start", paddingVertical: 8 },
-  openBrowserText: {
-    color: COLORS.accent,
-    fontFamily: FONTS.sansSemi,
-    fontSize: 14,
-  },
+  openBrowserText: { color: "#009CA5", fontWeight: "600", fontSize: 14 },
 });

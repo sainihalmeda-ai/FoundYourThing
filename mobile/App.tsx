@@ -23,13 +23,26 @@ import { AppNavigator } from "./src/navigation/AppNavigator";
 import { COLORS, FONTS } from "./src/constants/config";
 
 /**
- * Browser (web): full React Native Web app (same as Render static site).
- * Android / iOS APK: WebView shell loading the deployed Render web URL —
- * the web app already works in mobile Chrome; the APK must show that same UI.
+ * Browser: full RN-web app (Render static site).
+ * Android/iOS APK: WebView of that same site — no native font gate (was delaying boot).
  */
 const USE_WEBVIEW_SHELL = Platform.OS !== "web";
 
 export default function App() {
+  if (USE_WEBVIEW_SHELL) {
+    return (
+      <ErrorBoundary>
+        <SafeAreaProvider>
+          <WebAppShell />
+        </SafeAreaProvider>
+      </ErrorBoundary>
+    );
+  }
+
+  return <WebBrowserApp />;
+}
+
+function WebBrowserApp() {
   const [fontsLoaded] = useFonts({
     Fraunces_400Regular,
     Fraunces_600SemiBold,
@@ -52,16 +65,6 @@ export default function App() {
         <ActivityIndicator color="#FFFFFF" size="large" />
         <Text style={styles.bootText}>Starting FYT…</Text>
       </View>
-    );
-  }
-
-  if (USE_WEBVIEW_SHELL) {
-    return (
-      <ErrorBoundary>
-        <SafeAreaProvider>
-          <WebAppShell />
-        </SafeAreaProvider>
-      </ErrorBoundary>
     );
   }
 
