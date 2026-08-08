@@ -1,0 +1,16 @@
+{
+  "name": "FoundYourThing",
+  "short_name": "FYT",
+  "description": "Campus AI lost & found",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F4F5F7",
+  "theme_color": "#102A56",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ]
+}

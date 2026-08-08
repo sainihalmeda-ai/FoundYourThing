@@ -26,12 +26,21 @@ npm run export:web
 
 ## Android APK (EAS)
 
+1. Create a free Expo account at https://expo.dev/signup (GitHub login works).
+2. From `mobile/`:
+
 ```powershell
 cd mobile
-npm install -g eas-cli
-eas login
-eas init
+npx eas-cli login
+npx eas-cli init
 npm run build:apk
 ```
 
-Download the APK from the EAS build page. Preview profile embeds `EXPO_PUBLIC_API_URL` from [`mobile/eas.json`](../mobile/eas.json).
+3. When the cloud build finishes, open the Expo build page and **Download** the `.apk`.
+4. On the phone: allow install from unknown sources → install the APK.
+
+Or add an Expo access token as GitHub secret `EXPO_TOKEN`, then run the workflow
+[`.github/workflows/eas-apk.yml`](../.github/workflows/eas-apk.yml) (Actions → Build Android APK → Run workflow).
+
+`eas.json` preview profile already points `EXPO_PUBLIC_API_URL` at
+`https://foundyourthing-api.onrender.com`.
