@@ -124,7 +124,7 @@ export const API_BASE_URL = resolvedApiBaseUrl;
 /** Expo preview APK install page — share the web /download link, not this raw URL. */
 export const APK_DOWNLOAD_URL =
   process.env.EXPO_PUBLIC_APK_URL ??
-  "https://expo.dev/artifacts/eas/pqBFFN27cOSta9pS7so3ICF-bol8qASIchDpeHl5SN4.apk";
+  "https://expo.dev/artifacts/eas/srIVeIgDYaLCgyYF8ijOUgD3rTJqXDOYySmiQ8XKuJ4.apk";
 
 /** Public download page on the hosted web app. */
 export const FYT_APK_PAGE_URL =
