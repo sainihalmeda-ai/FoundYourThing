@@ -118,7 +118,18 @@ FoundYourThing/
 
 ---
 
-## Quick Start
+## Live demo (deployed)
+
+| Surface | URL |
+|---------|-----|
+| **Web app** | https://foundyourthing-web.onrender.com |
+| **API** | https://foundyourthing-api.onrender.com |
+| **API docs** | https://foundyourthing-api.onrender.com/docs |
+| **Health** | https://foundyourthing-api.onrender.com/api/health |
+
+Android APK: from `mobile/` run `.\build-apk.ps1` (requires a free [Expo](https://expo.dev) login), then download the `.apk` from the Expo build page. See [docs/DEPLOY.md](docs/DEPLOY.md).
+
+---
 
 ### Prerequisites
 
