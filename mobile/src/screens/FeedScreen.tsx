@@ -11,12 +11,6 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, {
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -40,7 +34,6 @@ import type { Item } from "../types";
 
 type FeedTab = "lost" | "found" | "mine";
 const TAB_ORDER: FeedTab[] = ["lost", "found", "mine"];
-const EASE = Easing.bezier(0.4, 0, 0.2, 1);
 
 export function FeedScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -56,7 +49,6 @@ export function FeedScreen() {
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<FeedTab>("found");
   const [segmentW, setSegmentW] = useState(0);
-  const pillX = useSharedValue(0);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -83,21 +75,12 @@ export function FeedScreen() {
     }, [load]),
   );
 
-  useEffect(() => {
-    if (!segmentW) return;
-    const idx = TAB_ORDER.indexOf(tab);
-    const cell = (segmentW - 8) / 3;
-    pillX.value = withTiming(4 + idx * cell, { duration: 220, easing: EASE });
-  }, [tab, segmentW, pillX]);
-
-  const pillStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: pillX.value }],
-    width: Math.max((segmentW - 8) / 3, 0),
-  }));
-
   const onSegmentLayout = (e: LayoutChangeEvent) => {
     setSegmentW(e.nativeEvent.layout.width);
   };
+
+  const cellW = Math.max((segmentW - 8) / 3, 0);
+  const pillLeft = 4 + TAB_ORDER.indexOf(tab) * cellW;
 
   const sectionItems = useMemo(() => {
     if (tab === "mine") return myItems;
@@ -198,7 +181,12 @@ export function FeedScreen() {
           </View>
 
           <View style={styles.segment} onLayout={onSegmentLayout}>
-            <Animated.View style={[styles.segmentPill, pillStyle]} />
+            <View
+              style={[
+                styles.segmentPill,
+                { width: cellW, transform: [{ translateX: pillLeft }] },
+              ]}
+            />
             {tabs.map((entry) => {
               const active = tab === entry.key;
               return (
