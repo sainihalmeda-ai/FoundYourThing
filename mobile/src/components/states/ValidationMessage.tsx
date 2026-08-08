@@ -32,10 +32,10 @@ const styles = StyleSheet.create({
   fieldWrap: {
     backgroundColor: "transparent",
     borderWidth: 0,
-    paddingHorizontal: 0,
+    paddingHorizontal: 2,
     paddingVertical: 0,
-    marginTop: -8,
-    marginBottom: 12,
+    marginTop: 6,
+    marginBottom: 4,
   },
   text: {
     color: COLORS.danger,
