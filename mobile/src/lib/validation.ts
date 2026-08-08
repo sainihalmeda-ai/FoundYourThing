@@ -100,14 +100,41 @@ export function validateRegister(form: {
   } else if (!isCampusId(form.vtu_id)) {
     errors.vtu_id = CAMPUS_ID_ERROR;
   }
-  if (!form.full_name.trim()) errors.full_name = "Full name is required.";
-  if (!form.department.trim()) errors.department = "Department is required.";
+  const name = form.full_name.trim().replace(/\s+/g, " ");
+  if (!name) {
+    errors.full_name = "Full name is required.";
+  } else if (!/^[A-Za-z][A-Za-z .'-]{1,118}[A-Za-z.]$|^[A-Za-z]{2,120}$/.test(name)) {
+    errors.full_name = "Enter a real full name (letters only).";
+  } else if (new Set(name.toLowerCase().replace(/\s/g, "")).size < 2) {
+    errors.full_name = "Enter a real full name.";
+  }
+
+  const dept = form.department.trim();
+  if (!dept) {
+    errors.department = "Department is required.";
+  } else if (!/^[A-Za-z][A-Za-z0-9 &/\-]{1,39}$/.test(dept)) {
+    errors.department = "Enter a valid department (e.g. CSE, ECE).";
+  }
+
   const emailError = validateCampusEmail(form.email, form.vtu_id);
   if (emailError) errors.email = emailError;
-  if (!form.phone.trim()) {
+
+  const phone = form.phone.trim().replace(/\D/g, "");
+  const phoneNorm =
+    phone.length === 12 && phone.startsWith("91") ? phone.slice(2) : phone;
+  const badPhones = new Set([
+    "1234567890",
+    "0123456789",
+    "9876543210",
+    "9999999999",
+    "8888888888",
+    "7777777777",
+    "6666666666",
+  ]);
+  if (!phoneNorm) {
     errors.phone = "Phone number is required.";
-  } else if (!/^\d{10}$/.test(form.phone.trim())) {
-    errors.phone = "Enter a 10-digit mobile number.";
+  } else if (badPhones.has(phoneNorm) || !/^[6-9]\d{9}$/.test(phoneNorm)) {
+    errors.phone = "Enter a valid 10-digit Indian mobile number.";
   }
   if (!form.password) {
     errors.password = "Password is required.";

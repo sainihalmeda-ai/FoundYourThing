@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from typing import Literal
 
@@ -5,11 +6,24 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from app.constants import VALUABLE_CATEGORIES
 
+_NAME_RE = re.compile(r"^[A-Za-z][A-Za-z .'-]{1,118}[A-Za-z.]$|^[A-Za-z]{2,120}$")
+_DEPT_RE = re.compile(r"^[A-Za-z][A-Za-z0-9 &/\-]{1,39}$")
+_PHONE_RE = re.compile(r"^[6-9]\d{9}$")
+_BAD_PHONES = {
+    "1234567890",
+    "0123456789",
+    "9876543210",
+    "9999999999",
+    "8888888888",
+    "7777777777",
+    "6666666666",
+}
+
 
 class UserRegister(BaseModel):
     vtu_id: str = Field(..., min_length=5, max_length=20, examples=["VTU27680"])
     full_name: str = Field(..., min_length=2, max_length=120)
-    department: str = Field(..., min_length=2, max_length=80)
+    department: str = Field(..., min_length=2, max_length=40)
     email: EmailStr
     phone: str = Field(..., min_length=10, max_length=15)
     password: str = Field(..., min_length=6, max_length=128)
@@ -18,6 +32,34 @@ class UserRegister(BaseModel):
     @classmethod
     def normalize_vtu(cls, value: str) -> str:
         return value.strip().upper()
+
+    @field_validator("full_name")
+    @classmethod
+    def validate_name(cls, value: str) -> str:
+        name = " ".join(value.strip().split())
+        if len(name) < 2 or not _NAME_RE.match(name):
+            raise ValueError("Enter a real full name (letters only).")
+        if len(set(name.lower().replace(" ", ""))) < 2:
+            raise ValueError("Enter a real full name.")
+        return name
+
+    @field_validator("department")
+    @classmethod
+    def validate_department(cls, value: str) -> str:
+        dept = value.strip().upper()
+        if not _DEPT_RE.match(dept):
+            raise ValueError("Enter a valid department code (e.g. CSE, ECE).")
+        return dept
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, value: str) -> str:
+        phone = re.sub(r"\D", "", value.strip())
+        if phone.startswith("91") and len(phone) == 12:
+            phone = phone[2:]
+        if phone in _BAD_PHONES or not _PHONE_RE.match(phone):
+            raise ValueError("Enter a valid 10-digit Indian mobile number.")
+        return phone
 
 
 class UserLogin(BaseModel):
