@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Download FYT APK · FoundYourThing</title>
+    <meta
+      name="description"
+      content="Download the FoundYourThing Android APK for campus lost & found."
+    />
+    <link rel="icon" href="/favicon.ico" />
+    <style>
+      :root {
+        --bg: #f4f5f7;
+        --ink: #102a56;
+        --ink-deep: #09182f;
+        --accent: #009ca5;
+        --muted: #667085;
+        --card: #ffffff;
+        --border: #e4e7ec;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(ellipse 80% 50% at 10% 0%, rgba(0, 156, 165, 0.12), transparent),
+          radial-gradient(ellipse 60% 40% at 90% 100%, rgba(16, 42, 86, 0.08), transparent),
+          var(--bg);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .card {
+        width: 100%;
+        max-width: 440px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 36px 32px 28px;
+        box-shadow: 0 12px 40px rgba(16, 40, 40, 0.08);
+        text-align: center;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: #f8f9fb;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+      }
+      h1 {
+        margin: 20px 0 8px;
+        font-size: 2rem;
+        letter-spacing: -0.04em;
+        line-height: 1.15;
+      }
+      h1 span {
+        color: var(--accent);
+        font-style: italic;
+      }
+      .sub {
+        margin: 0 0 28px;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.5;
+      }
+      .btn {
+        display: block;
+        width: 100%;
+        padding: 16px 20px;
+        border: none;
+        border-radius: 16px;
+        background: linear-gradient(180deg, var(--ink) 0%, var(--ink-deep) 100%);
+        color: #fff;
+        font-size: 16px;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        box-shadow: 0 8px 24px rgba(16, 42, 86, 0.25);
+      }
+      .btn:hover {
+        transform: translateY(-1px);
+      }
+      .btn:active {
+        transform: translateY(0);
+      }
+      .hint {
+        margin: 18px 0 0;
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+      .web {
+        display: inline-block;
+        margin-top: 22px;
+        color: var(--accent);
+        font-size: 14px;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .web:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <div class="badge">Android · Campus install</div>
+      <h1>Found<span>Your</span>Thing</h1>
+      <p class="sub">
+        Download the FYT Android app. After install, it talks to the live campus API —
+        no computer needed.
+      </p>
+      <a
+        class="btn"
+        id="apk"
+        href="https://expo.dev/accounts/meda_sai_nihal/projects/foundyourthing/builds/46ac71a8-bb72-41d6-9eb9-9837427b8cfe"
+      >
+        Download FYT APK
+      </a>
+      <p class="hint">
+        On your phone: open this page → tap the button → allow
+        <strong>Install unknown apps</strong> if asked → Install.
+      </p>
+      <a class="web" href="/">Open FYT in the browser</a>
+    </main>
+  </body>
+</html>

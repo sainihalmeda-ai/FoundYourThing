@@ -325,6 +325,13 @@ export function LoginScreen({ navigation, route }: Props) {
         disabled={submitting}
         loading={submitting}
       />
+      <Pressable
+        onPress={() => navigation.navigate("Download")}
+        style={styles.apkLink}
+      >
+        <Ionicons name="logo-android" size={16} color={COLORS.accent} />
+        <Text style={styles.apkLinkText}>Get the Android app · Download FYT APK</Text>
+      </Pressable>
       <Text style={styles.sessionNote}>
         Sessions expire after 10 minutes of inactivity.
       </Text>
@@ -595,5 +602,18 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.sans,
     fontSize: 11,
     color: COLORS.textMuted,
+  },
+  apkLink: {
+    marginTop: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 8,
+  },
+  apkLinkText: {
+    fontFamily: FONTS.sansSemi,
+    fontSize: 13,
+    color: COLORS.accent,
   },
 });

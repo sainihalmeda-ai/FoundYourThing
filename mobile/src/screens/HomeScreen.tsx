@@ -13,6 +13,7 @@ import { SessionBanner } from "../components/SessionBanner";
 import { AppButton } from "../components/Ui";
 import { useAuth } from "../context/AuthContext";
 import { COLORS, FONTS, SHADOW } from "../constants/config";
+import { openFytApkPage } from "../lib/apk";
 import { RootStackParamList } from "../navigation/types";
 
 export function HomeScreen() {
@@ -140,6 +141,14 @@ export function HomeScreen() {
               VTU ID is the only thing others see until you both accept a claim.
             </Text>
           </View>
+
+          <Pressable
+            style={({ pressed }) => [styles.apkRow, pressed && styles.pressed]}
+            onPress={openFytApkPage}
+          >
+            <Ionicons name="logo-android" size={16} color={COLORS.accent} />
+            <Text style={styles.apkRowText}>Get the Android app · Download FYT APK</Text>
+          </Pressable>
 
           <AppButton label="Log out" onPress={logout} variant="ghost" style={{ marginTop: 8 }} />
           </PageEnter>
@@ -335,6 +344,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.textMuted,
     lineHeight: 16,
+  },
+  apkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    marginBottom: 4,
+  },
+  apkRowText: {
+    fontFamily: FONTS.sansSemi,
+    fontSize: 13,
+    color: COLORS.accent,
   },
   pressed: { opacity: 0.92, transform: [{ scale: 0.985 }] },
 });

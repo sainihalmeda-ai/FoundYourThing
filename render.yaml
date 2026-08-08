@@ -1,4 +1,4 @@
-# Render Blueprint — FoundYourThing API
+# Render Blueprint — FoundYourThing
 # Dashboard: https://dashboard.render.com
 #
 # Free web services have no persistent disks (uploads reset on redeploy).
@@ -30,3 +30,24 @@ services:
         value: "10"
       - key: LIVEGO_ENABLED
         value: "false"
+
+  - type: web
+    name: foundyourthing-web
+    runtime: static
+    buildCommand: cd mobile && npm ci && EXPO_PUBLIC_API_URL=https://foundyourthing-api.onrender.com npx expo export --platform web
+    staticPublishPath: mobile/dist
+    routes:
+      - type: rewrite
+        source: /download
+        destination: /download/index.html
+      - type: rewrite
+        source: /download/
+        destination: /download/index.html
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: EXPO_PUBLIC_API_URL
+        value: https://foundyourthing-api.onrender.com

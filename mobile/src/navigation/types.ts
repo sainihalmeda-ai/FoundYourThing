@@ -7,6 +7,7 @@ export type MainTabParamList = {
 export type RootStackParamList = {
   Login: { mode?: "login" | "register" } | undefined;
   Register: undefined;
+  Download: undefined;
   MainTabs: undefined;
   Home: undefined;
   Report: { mode: "lost" | "found"; linkFoundId?: number; linkLostId?: number };

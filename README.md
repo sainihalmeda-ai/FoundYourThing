@@ -123,9 +123,12 @@ FoundYourThing/
 | Surface | URL |
 |---------|-----|
 | **Web app** | https://foundyourthing-web.onrender.com |
+| **Download FYT APK** | https://foundyourthing-web.onrender.com/download/ |
 | **API** | https://foundyourthing-api.onrender.com |
 | **API docs** | https://foundyourthing-api.onrender.com/docs |
 | **Health** | https://foundyourthing-api.onrender.com/api/health |
+
+Share **Download FYT APK** with classmates — not the API URL (that only shows JSON).
 
 Android APK: from `mobile/` run `.\build-apk.ps1` (requires a free [Expo](https://expo.dev) login), then download the `.apk` from the Expo build page. See [docs/DEPLOY.md](docs/DEPLOY.md).
 

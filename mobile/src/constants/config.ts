@@ -124,6 +124,16 @@ if (!resolvedApiBaseUrl) {
 
 export const API_BASE_URL = resolvedApiBaseUrl;
 
+/** Expo preview APK install page — share the web /download link, not this raw URL. */
+export const APK_DOWNLOAD_URL =
+  process.env.EXPO_PUBLIC_APK_URL ??
+  "https://expo.dev/accounts/meda_sai_nihal/projects/foundyourthing/builds/46ac71a8-bb72-41d6-9eb9-9837427b8cfe";
+
+/** Public download page on the hosted web app. */
+export const FYT_APK_PAGE_URL =
+  process.env.EXPO_PUBLIC_FYT_APK_PAGE ??
+  "https://foundyourthing-web.onrender.com/download/";
+
 export const REQUEST_TIMEOUT_MS = 15000;
 export const MAX_RETRIES = 2;
 /** Health probe is short so the connection banner reacts quickly but not blindly. */
