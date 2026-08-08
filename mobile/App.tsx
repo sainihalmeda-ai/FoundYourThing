@@ -1,6 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import React from "react";
-import { ActivityIndicator, Text, View } from "react-native";
+import { ActivityIndicator, Platform, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import {
   useFonts,
@@ -18,8 +18,16 @@ import { AuthProvider } from "./src/context/AuthContext";
 import { ConnectionProvider } from "./src/context/ConnectionContext";
 import { ErrorBoundary } from "./src/components/ErrorBoundary";
 import { KeyboardProvider } from "./src/components/Keyboard";
+import { WebAppShell } from "./src/components/WebAppShell";
 import { AppNavigator } from "./src/navigation/AppNavigator";
 import { COLORS, FONTS } from "./src/constants/config";
+
+/**
+ * Browser (web): full React Native Web app (same as Render static site).
+ * Android / iOS APK: WebView shell loading the deployed Render web URL —
+ * the web app already works in mobile Chrome; the APK must show that same UI.
+ */
+const USE_WEBVIEW_SHELL = Platform.OS !== "web";
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -44,6 +52,16 @@ export default function App() {
         <ActivityIndicator color="#FFFFFF" size="large" />
         <Text style={styles.bootText}>Starting FYT…</Text>
       </View>
+    );
+  }
+
+  if (USE_WEBVIEW_SHELL) {
+    return (
+      <ErrorBoundary>
+        <SafeAreaProvider>
+          <WebAppShell />
+        </SafeAreaProvider>
+      </ErrorBoundary>
     );
   }
 

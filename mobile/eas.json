@@ -15,7 +15,8 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://foundyourthing-api.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://foundyourthing-api.onrender.com",
+        "EXPO_PUBLIC_WEB_APP_URL": "https://foundyourthing-web.onrender.com"
       }
     },
     "production": {
@@ -24,7 +25,8 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://foundyourthing-api.onrender.com"
+        "EXPO_PUBLIC_API_URL": "https://foundyourthing-api.onrender.com",
+        "EXPO_PUBLIC_WEB_APP_URL": "https://foundyourthing-web.onrender.com"
       }
     }
   },

@@ -55,18 +55,31 @@ export function validateCampusEmail(email: string, campusId: string): string | n
 
   if (isStudentId(cid)) {
     const compact = local.replace(/[._-]/g, "");
-    if (compact !== cid.toLowerCase() && compact !== `vtu${tail.toLowerCase()}`) {
-      return `Student email must be your VTU ID, e.g. ${cid.toLower()}@college.edu.in`;
+    const cidLower = cid.toLowerCase();
+    const tailLower = tail.toLowerCase();
+    if (compact !== cidLower && compact !== `vtu${tailLower}`) {
+      return "Student email must be your VTU ID, e.g. " + cidLower + "@college.edu.in";
     }
     return null;
   }
 
   // Faculty / staff
+  const staffTail = tail.toLowerCase();
   if (!/^[a-z][a-z._-]*\d{3,}$/.test(local)) {
-    return `Faculty email must be your name followed by your staff number, e.g. nihal${tail.toLower()}@college.edu.in`;
+    return (
+      "Faculty email must be your name followed by your staff number, e.g. nihal" +
+      staffTail +
+      "@college.edu.in"
+    );
   }
-  if (!local.endsWith(tail.toLowerCase())) {
-    return `Faculty email must end with your staff number (${tail}), e.g. name${tail.toLower()}@college.edu.in`;
+  if (!local.endsWith(staffTail)) {
+    return (
+      "Faculty email must end with your staff number (" +
+      tail +
+      "), e.g. name" +
+      staffTail +
+      "@college.edu.in"
+    );
   }
   return null;
 }

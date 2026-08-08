@@ -111,6 +111,11 @@ function devServerApiUrl(): string | null {
 /** Live API — always used as last resort so a missing env never blank-screens the APK. */
 export const PRODUCTION_API_URL = "https://foundyourthing-api.onrender.com";
 
+/** Deployed Expo web app — Android APK WebView loads this URL. */
+export const WEB_APP_URL =
+  process.env.EXPO_PUBLIC_WEB_APP_URL ??
+  "https://foundyourthing-web.onrender.com";
+
 const resolvedApiBaseUrl =
   (__DEV__ ? devServerApiUrl() : null) ??
   process.env.EXPO_PUBLIC_API_URL ??
