@@ -6,40 +6,46 @@ import { COLORS, FONTS, RADIUS } from "../constants/config";
 export function ConnectionBanner() {
   const { state, refresh, dismissSlow } = useConnection();
 
-  if (state === "online" || state === "checking") {
+  if (state === "online") {
     return null;
   }
 
   const message =
-    state === "offline"
-      ? "You’re offline. Reports won’t upload until you’re back."
-      : state === "server_down"
-        ? "Server unavailable. Start the backend, then retry."
-        : state === "slow"
-          ? "Network is slow. Requests may take longer."
-          : "Connection issue.";
+    state === "checking"
+      ? "Waking campus server… first open after idle can take up to a minute."
+      : state === "offline"
+        ? "You’re offline. Reports won’t upload until you’re back."
+        : state === "server_down"
+          ? "Server sleeping or unreachable. Tap Retry and wait — free hosting wakes slowly."
+          : state === "slow"
+            ? "Network is slow. Requests may take longer."
+            : "Connection issue.";
 
   const title =
-    state === "offline"
-      ? "No internet"
-      : state === "server_down"
-        ? "Server unavailable"
-        : "Slow network";
+    state === "checking"
+      ? "Connecting"
+      : state === "offline"
+        ? "No internet"
+        : state === "server_down"
+          ? "Server unavailable"
+          : "Slow network";
 
   return (
     <View style={styles.banner}>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
-      <View style={styles.row}>
-        <Pressable style={styles.button} onPress={refresh}>
-          <Text style={styles.buttonText}>Retry</Text>
-        </Pressable>
-        {state === "slow" ? (
-          <Pressable style={styles.button} onPress={dismissSlow}>
-            <Text style={styles.buttonText}>Continue</Text>
+      {state !== "checking" ? (
+        <View style={styles.row}>
+          <Pressable style={styles.button} onPress={() => void refresh({ coldStart: true })}>
+            <Text style={styles.buttonText}>Retry</Text>
           </Pressable>
-        ) : null}
-      </View>
+          {state === "slow" ? (
+            <Pressable style={styles.button} onPress={dismissSlow}>
+              <Text style={styles.buttonText}>Continue</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }

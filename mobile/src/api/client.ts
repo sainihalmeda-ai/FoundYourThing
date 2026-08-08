@@ -1,5 +1,7 @@
 import {
   API_BASE_URL,
+  HEALTH_COLD_START_ATTEMPTS,
+  HEALTH_COLD_START_TIMEOUT_MS,
   HEALTH_TIMEOUT_MS,
   MAX_RETRIES,
   REQUEST_TIMEOUT_MS,
@@ -146,13 +148,21 @@ export async function apiRequest<T>(
 }
 
 /**
- * One dropped request should not black out the whole app, so a couple of quick
- * attempts must fail before we declare the server unreachable.
+ * One dropped request should not black out the whole app. Prefer a longer first
+ * probe so Render free-tier cold starts (often 30–50s) still count as online.
  */
-export async function checkServerHealth(attempts = 2): Promise<boolean> {
+export async function checkServerHealth(
+  attempts = HEALTH_COLD_START_ATTEMPTS,
+  opts?: { coldStart?: boolean },
+): Promise<boolean> {
+  const coldStart = opts?.coldStart ?? true;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const timeoutMs =
+      coldStart && attempt === 0
+        ? HEALTH_COLD_START_TIMEOUT_MS
+        : HEALTH_TIMEOUT_MS;
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     try {
       const response = await fetch(`${API_BASE_URL}/api/health`, {
         method: "GET",
@@ -160,11 +170,11 @@ export async function checkServerHealth(attempts = 2): Promise<boolean> {
       });
       if (response.ok) return true;
     } catch {
-      // Fall through to the next attempt.
+      // Fall through — often the host is still waking.
     } finally {
       clearTimeout(timeout);
     }
-    if (attempt < attempts - 1) await sleep(700);
+    if (attempt < attempts - 1) await sleep(1500 * (attempt + 1));
   }
   return false;
 }

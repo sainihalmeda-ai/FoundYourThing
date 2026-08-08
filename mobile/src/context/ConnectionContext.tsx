@@ -5,17 +5,20 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { checkServerHealth } from "../api/client";
 import type { ConnectionState } from "../types";
+
+type RefreshOpts = { coldStart?: boolean };
 
 type ConnectionContextValue = {
   state: ConnectionState;
   message: string;
   /** True when the API is reachable (includes slow network). */
   canUseApi: boolean;
-  refresh: () => Promise<void>;
+  refresh: (opts?: RefreshOpts) => Promise<void>;
   dismissSlow: () => void;
 };
 
@@ -36,28 +39,39 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
   const [state, setState] = useState<ConnectionState>("checking");
   const [message, setMessage] = useState("Checking connection...");
   const [slowDismissed, setSlowDismissed] = useState(false);
+  /** First open / after failure should wait for Render cold start. */
+  const preferColdStart = useRef(true);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (opts?: RefreshOpts) => {
+    const coldStart = opts?.coldStart ?? preferColdStart.current;
     setState("checking");
-    setMessage("Checking connection...");
+    setMessage(
+      coldStart
+        ? "Waking campus server… first open after idle can take up to a minute."
+        : "Checking connection...",
+    );
 
     const net = await NetInfo.fetch();
     if (!net.isConnected) {
       setSlowDismissed(false);
+      preferColdStart.current = true;
       setState("offline");
       setMessage("No internet connection. Reports will not upload until you are back online.");
       return;
     }
 
-    const healthy = await checkServerHealth();
+    const healthy = await checkServerHealth(undefined, { coldStart });
     if (!healthy) {
       setSlowDismissed(false);
+      preferColdStart.current = true;
       setState("server_down");
       setMessage(
-        "Internet is available, but the FoundYourThing server is unreachable. Start the backend or update EXPO_PUBLIC_API_URL.",
+        "Campus server is not responding yet. Wait a moment and tap Retry — free hosting sleeps when idle.",
       );
       return;
     }
+
+    preferColdStart.current = false;
 
     if (isSlowNetwork(net) && !slowDismissed) {
       setState("slow");
@@ -76,16 +90,20 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   useEffect(() => {
-    refresh();
+    void refresh({ coldStart: true });
     const unsubscribe = NetInfo.addEventListener(() => {
-      refresh();
+      void refresh({ coldStart: false });
     });
-    const interval = setInterval(refresh, 30000);
+    const interval = setInterval(() => {
+      void refresh({ coldStart: false });
+    }, 45000);
     return () => {
       unsubscribe();
       clearInterval(interval);
     };
-  }, [refresh]);
+    // Mount-only: avoid re-subscribing when refresh identity changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const canUseApi = state === "online" || state === "slow";
 

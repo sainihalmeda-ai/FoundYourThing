@@ -137,7 +137,10 @@ export function LoginScreen({ navigation, route }: Props) {
       setFieldErrors(errors);
       if (hasErrors(errors)) return;
       if (!canUseApi) {
-        setFormError("Backend is not connected. Start backend/start.ps1 in another terminal.");
+        setFormError(
+          "Campus server is waking up or offline. Wait up to a minute, tap Retry on the banner, then sign in again.",
+        );
+        void refresh({ coldStart: true });
         return;
       }
       setSubmitting(true);
@@ -160,7 +163,10 @@ export function LoginScreen({ navigation, route }: Props) {
     setFieldErrors(errors);
     if (hasErrors(errors)) return;
     if (!canUseApi) {
-      setFormError("Backend is not connected. Start backend/start.ps1 in another terminal.");
+      setFormError(
+        "Campus server is waking up or offline. Wait up to a minute, tap Retry on the banner, then try again.",
+      );
+      void refresh({ coldStart: true });
       return;
     }
     setSubmitting(true);

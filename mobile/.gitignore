@@ -9,6 +9,10 @@ dist/
 web-build/
 expo-env.d.ts
 
+# Built APKs (host via Expo artifacts / GitHub Releases — do not commit)
+*.apk
+public/download/*.apk
+
 # Native
 .kotlin/
 *.orig.*

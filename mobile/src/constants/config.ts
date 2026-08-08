@@ -127,19 +127,25 @@ export const API_BASE_URL = resolvedApiBaseUrl;
 /** Expo preview APK install page — share the web /download link, not this raw URL. */
 export const APK_DOWNLOAD_URL =
   process.env.EXPO_PUBLIC_APK_URL ??
-  "https://expo.dev/accounts/meda_sai_nihal/projects/foundyourthing/builds/46ac71a8-bb72-41d6-9eb9-9837427b8cfe";
+  "https://expo.dev/artifacts/eas/7rozW1CYxnH5ALcq53GcgVsZbN7q8QkQz8mADxraRDE.apk";
 
 /** Public download page on the hosted web app. */
 export const FYT_APK_PAGE_URL =
   process.env.EXPO_PUBLIC_FYT_APK_PAGE ??
   "https://foundyourthing-web.onrender.com/download/";
 
-export const REQUEST_TIMEOUT_MS = 15000;
+export const REQUEST_TIMEOUT_MS = 45000;
 export const MAX_RETRIES = 2;
-/** Health probe is short so the connection banner reacts quickly but not blindly. */
-export const HEALTH_TIMEOUT_MS = 6000;
+/**
+ * Free Render spins down after idle — first health check can take 30–60s.
+ * A short probe makes the phone show “server down” while the API is still waking.
+ */
+export const HEALTH_TIMEOUT_MS = 25000;
+/** Extra patience on first open / after a failed wake. */
+export const HEALTH_COLD_START_TIMEOUT_MS = 60000;
+export const HEALTH_COLD_START_ATTEMPTS = 4;
 /** Photo uploads travel far more bytes than any other call. */
-export const UPLOAD_TIMEOUT_MS = 60000;
+export const UPLOAD_TIMEOUT_MS = 90000;
 
 /**
  * LiveGo — found reports must be a fresh camera photo, verified against the

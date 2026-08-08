@@ -2,18 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Download FYT APK · FoundYourThing</title>
     <meta
       name="description"
       content="Download the FoundYourThing Android APK for campus lost & found."
     />
+    <meta name="theme-color" content="#09122C" />
     <link rel="icon" href="/favicon.ico" />
     <style>
       :root {
         --bg: #f4f5f7;
         --ink: #102a56;
-        --ink-deep: #09182f;
+        --ink-deep: #09122c;
         --accent: #009ca5;
         --muted: #667085;
         --card: #ffffff;
@@ -46,10 +47,26 @@
         box-shadow: 0 12px 40px rgba(16, 40, 40, 0.08);
         text-align: center;
       }
+      .logo {
+        width: 88px;
+        height: 88px;
+        margin: 0 auto;
+        border-radius: 22px;
+        background: linear-gradient(180deg, #1d4ed8 0%, #09122c 100%);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        box-shadow: 0 10px 28px rgba(16, 42, 86, 0.28);
+      }
       .badge {
         display: inline-flex;
         align-items: center;
         gap: 8px;
+        margin-top: 18px;
         padding: 6px 12px;
         border-radius: 999px;
         border: 1px solid var(--border);
@@ -60,7 +77,7 @@
         letter-spacing: 0.02em;
       }
       h1 {
-        margin: 20px 0 8px;
+        margin: 16px 0 8px;
         font-size: 2rem;
         letter-spacing: -0.04em;
         line-height: 1.15;
@@ -70,7 +87,7 @@
         font-style: italic;
       }
       .sub {
-        margin: 0 0 28px;
+        margin: 0 0 22px;
         color: var(--muted);
         font-size: 15px;
         line-height: 1.5;
@@ -87,20 +104,26 @@
         font-weight: 700;
         text-decoration: none;
         cursor: pointer;
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
         box-shadow: 0 8px 24px rgba(16, 42, 86, 0.25);
+        -webkit-tap-highlight-color: transparent;
       }
-      .btn:hover {
-        transform: translateY(-1px);
-      }
-      .btn:active {
-        transform: translateY(0);
+      .btn.secondary {
+        margin-top: 10px;
+        background: #fff;
+        color: var(--ink);
+        border: 1px solid var(--border);
+        box-shadow: none;
       }
       .hint {
         margin: 18px 0 0;
         font-size: 13px;
         color: var(--muted);
         line-height: 1.45;
+        text-align: left;
+      }
+      .hint ol {
+        margin: 8px 0 0;
+        padding-left: 18px;
       }
       .web {
         display: inline-block;
@@ -110,31 +133,59 @@
         font-weight: 600;
         text-decoration: none;
       }
-      .web:hover {
-        text-decoration: underline;
+      .status {
+        display: none;
+        margin-top: 12px;
+        font-size: 13px;
+        color: var(--ink);
+        font-weight: 600;
       }
     </style>
   </head>
   <body>
     <main class="card">
+      <div class="logo" aria-label="FYT">FYT</div>
       <div class="badge">Android · Campus install</div>
       <h1>Found<span>Your</span>Thing</h1>
       <p class="sub">
-        Download the FYT Android app. After install, it talks to the live campus API —
-        no computer needed.
+        Tap below to download the APK (~76&nbsp;MB). Use Chrome on Android — Expo build
+        pages often fail on phones.
       </p>
+      <!--
+        Direct artifact URL (not the expo.dev/builds/... page).
+        Do not use the HTML download= attribute — it breaks Expo’s redirect chain on mobile Chrome.
+      -->
       <a
         class="btn"
         id="apk"
-        href="https://expo.dev/accounts/meda_sai_nihal/projects/foundyourthing/builds/46ac71a8-bb72-41d6-9eb9-9837427b8cfe"
+        href="https://expo.dev/artifacts/eas/7rozW1CYxnH5ALcq53GcgVsZbN7q8QkQz8mADxraRDE.apk"
+        rel="noopener"
       >
         Download FYT APK
       </a>
-      <p class="hint">
-        On your phone: open this page → tap the button → allow
-        <strong>Install unknown apps</strong> if asked → Install.
-      </p>
+      <p class="status" id="status"></p>
+      <div class="hint">
+        <strong>If nothing downloads:</strong>
+        <ol>
+          <li>Open this page in <strong>Chrome</strong> (not Instagram/WhatsApp in-app browser).</li>
+          <li>Tap <strong>Download FYT APK</strong> and wait — file is large.</li>
+          <li>Open the file from Downloads → allow <strong>Install unknown apps</strong>.</li>
+        </ol>
+      </div>
       <a class="web" href="/">Open FYT in the browser</a>
     </main>
+    <script>
+      (function () {
+        var btn = document.getElementById("apk");
+        var status = document.getElementById("status");
+        if (!btn) return;
+        btn.addEventListener("click", function () {
+          if (status) {
+            status.style.display = "block";
+            status.textContent = "Starting download… check your notification shade.";
+          }
+        });
+      })();
+    </script>
   </body>
 </html>
