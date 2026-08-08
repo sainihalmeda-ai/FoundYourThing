@@ -148,28 +148,22 @@
       <div class="badge">Android · Campus install</div>
       <h1>Found<span>Your</span>Thing</h1>
       <p class="sub">
-        Tap below to download the APK (~76&nbsp;MB). Use Chrome on Android — Expo build
-        pages often fail on phones.
+        Download FYT v1.0.2 (~76&nbsp;MB) hosted on this site. Use <strong>Chrome</strong> on
+        Android — uninstall any old FYT first.
       </p>
-      <!--
-        Direct artifact URL (not the expo.dev/builds/... page).
-        Do not use the HTML download= attribute — it breaks Expo’s redirect chain on mobile Chrome.
-      -->
-      <a
-        class="btn"
-        id="apk"
-        href="https://expo.dev/artifacts/eas/VW1aam6pC1ZIXj7WauiXnUAICqcCH28R9ouvSXicWKE.apk"
-        rel="noopener"
-      >
+      <!-- Same-origin APK — avoids broken Expo CDN redirects on mobile Chrome. -->
+      <a class="btn" id="apk" href="/download/FYT.apk" rel="noopener">
         Download FYT APK
       </a>
       <p class="status" id="status"></p>
       <div class="hint">
-        <strong>If nothing downloads:</strong>
+        <strong>Install steps (do in order):</strong>
         <ol>
-          <li>Open this page in <strong>Chrome</strong> (not Instagram/WhatsApp in-app browser).</li>
-          <li>Tap <strong>Download FYT APK</strong> and wait — file is large.</li>
-          <li>Open the file from Downloads → allow <strong>Install unknown apps</strong>.</li>
+          <li>Uninstall old <strong>FYT</strong> from Settings → Apps (if present).</li>
+          <li>Open this page in <strong>Chrome</strong> (not WhatsApp/Instagram browser).</li>
+          <li>Tap <strong>Download FYT APK</strong> and wait until the file finishes.</li>
+          <li>Open <strong>FYT.apk</strong> from Downloads → allow Install unknown apps.</li>
+          <li>Open FYT — you should see “Starting FYT…” then the login screen.</li>
         </ol>
       </div>
       <a class="web" href="/">Open FYT in the browser</a>

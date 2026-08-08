@@ -8,15 +8,6 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, {
-  Easing,
-  FadeIn,
-  FadeInDown,
-  FadeOutUp,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
 import { KeyboardAwareScrollView } from "../components/Keyboard";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -62,8 +53,6 @@ const FEATURES: {
   },
 ];
 
-const EASE = Easing.bezier(0.4, 0, 0.2, 1);
-
 export function LoginScreen({ navigation, route }: Props) {
   const { login, register } = useAuth();
   const { state, refresh } = useConnection();
@@ -85,7 +74,6 @@ export function LoginScreen({ navigation, route }: Props) {
   const [formError, setFormError] = useState<string | null>(null);
 
   const [segmentW, setSegmentW] = useState(0);
-  const pillX = useSharedValue(0);
 
   // Wipe Chrome password-manager paint-in (it ignores autocomplete=off).
   useEffect(() => {
@@ -109,23 +97,12 @@ export function LoginScreen({ navigation, route }: Props) {
     if (route.params?.mode) setMode(route.params.mode);
   }, [route.params?.mode]);
 
-  useEffect(() => {
-    if (!segmentW) return;
-    const half = (segmentW - 8) / 2;
-    pillX.value = withTiming(mode === "login" ? 4 : half + 4, {
-      duration: 220,
-      easing: EASE,
-    });
-  }, [mode, segmentW, pillX]);
-
-  const pillStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: pillX.value }],
-    width: Math.max((segmentW - 8) / 2, 0),
-  }));
-
   const onSegmentLayout = (e: LayoutChangeEvent) => {
     setSegmentW(e.nativeEvent.layout.width);
   };
+
+  const pillWidth = Math.max((segmentW - 8) / 2, 0);
+  const pillLeft = mode === "login" ? 4 : pillWidth + 4;
 
   const clearField = (key: string) =>
     setFieldErrors((prev) => ({ ...prev, [key]: "" }));
@@ -192,7 +169,12 @@ export function LoginScreen({ navigation, route }: Props) {
       </View>
 
       <View style={styles.segment} onLayout={onSegmentLayout}>
-        <Animated.View style={[styles.segmentPill, pillStyle]} />
+        <View
+          style={[
+            styles.segmentPill,
+            { width: pillWidth, transform: [{ translateX: pillLeft }] },
+          ]}
+        />
         {(["login", "register"] as const).map((m) => {
           const active = mode === m;
           return (
@@ -246,11 +228,7 @@ export function LoginScreen({ navigation, route }: Props) {
         />
 
         {mode === "register" ? (
-          <Animated.View
-            key="register-fields"
-            entering={FadeInDown.duration(220).easing(EASE)}
-            exiting={FadeOutUp.duration(160)}
-          >
+          <View key="register-fields">
             <Field
               label="Full name"
               icon="person-outline"
@@ -301,7 +279,7 @@ export function LoginScreen({ navigation, route }: Props) {
               placeholder="10-digit mobile"
               error={fieldErrors.phone}
             />
-          </Animated.View>
+          </View>
         ) : null}
       </View>
 
@@ -343,7 +321,7 @@ export function LoginScreen({ navigation, route }: Props) {
 
   const brandPanel = (
     <InkSurface style={styles.brandPanel}>
-      <Animated.View entering={FadeIn.duration(280)} style={styles.brandInner}>
+      <View style={styles.brandInner}>
         <View style={styles.brandBadge}>
           <Ionicons name="shield-checkmark" size={14} color={COLORS.accent} />
           <Text style={styles.brandBadgeText}>Privacy-first · VTU / TTS</Text>
@@ -372,7 +350,7 @@ export function LoginScreen({ navigation, route }: Props) {
         <Text style={styles.brandFoot}>
           © FoundYourThing 2026 · Campus Lost & Found Office
         </Text>
-      </Animated.View>
+      </View>
     </InkSurface>
   );
 

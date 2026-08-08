@@ -1,7 +1,6 @@
-import "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Text, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import {
   useFonts,
@@ -20,8 +19,7 @@ import { ConnectionProvider } from "./src/context/ConnectionContext";
 import { ErrorBoundary } from "./src/components/ErrorBoundary";
 import { KeyboardProvider } from "./src/components/Keyboard";
 import { AppNavigator } from "./src/navigation/AppNavigator";
-import { COLORS } from "./src/constants/config";
-import { checkForAppUpdates } from "./src/lib/checkForUpdates";
+import { COLORS, FONTS } from "./src/constants/config";
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -36,29 +34,15 @@ export default function App() {
   const [fontsTimedOut, setFontsTimedOut] = React.useState(false);
 
   React.useEffect(() => {
-    const id = setTimeout(() => setFontsTimedOut(true), 2500);
-    return () => clearTimeout(id);
-  }, []);
-
-  // Defer OTA — never block first paint. Updates apply on a later cold start.
-  React.useEffect(() => {
-    const id = setTimeout(() => {
-      void checkForAppUpdates();
-    }, 8000);
+    const id = setTimeout(() => setFontsTimedOut(true), 1500);
     return () => clearTimeout(id);
   }, []);
 
   if (!fontsLoaded && !fontsTimedOut) {
     return (
-      <View
-        style={{
-          flex: 1,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: COLORS.inkTop,
-        }}
-      >
+      <View style={styles.boot}>
         <ActivityIndicator color="#FFFFFF" size="large" />
+        <Text style={styles.bootText}>Starting FYT…</Text>
       </View>
     );
   }
@@ -78,3 +62,18 @@ export default function App() {
     </ErrorBoundary>
   );
 }
+
+const styles = {
+  boot: {
+    flex: 1 as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    backgroundColor: COLORS.inkTop,
+    gap: 12,
+  },
+  bootText: {
+    color: "#FFFFFF",
+    fontSize: 15,
+    fontFamily: FONTS.sansSemi,
+  },
+};

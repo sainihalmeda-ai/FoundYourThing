@@ -1,15 +1,6 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { Pressable, StyleSheet, Text, View, ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import Animated, {
-  Easing,
-  FadeIn,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from "react-native-reanimated";
 import { COLORS, FONTS, RADIUS, SHADOW } from "../../constants/config";
 
 export type StateAction = {
@@ -21,7 +12,6 @@ export type StateAction = {
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
 type Props = {
-  /** Ionicons glyph name, e.g. "cloud-offline-outline" */
   icon: IconName;
   iconColor?: string;
   iconBg?: string;
@@ -30,11 +20,11 @@ type Props = {
   hint?: string;
   actions?: StateAction[];
   compact?: boolean;
-  /** Soft pulse behind the icon — nice for loading-adjacent empty states */
   pulse?: boolean;
   style?: ViewStyle;
 };
 
+/** Empty / offline / error panels — no Reanimated (safe on release APKs). */
 export function StateView({
   icon,
   iconColor = COLORS.accent,
@@ -44,49 +34,12 @@ export function StateView({
   hint,
   actions = [],
   compact = false,
-  pulse = false,
   style,
 }: Props) {
-  const pulseScale = useSharedValue(1);
-  const pulseOpacity = useSharedValue(0.45);
-
-  useEffect(() => {
-    if (!pulse) return;
-    pulseScale.value = withRepeat(
-      withSequence(
-        withTiming(1.35, { duration: 1100, easing: Easing.out(Easing.quad) }),
-        withTiming(1, { duration: 1100, easing: Easing.in(Easing.quad) }),
-      ),
-      -1,
-      false,
-    );
-    pulseOpacity.value = withRepeat(
-      withSequence(
-        withTiming(0.12, { duration: 1100 }),
-        withTiming(0.4, { duration: 1100 }),
-      ),
-      -1,
-      false,
-    );
-  }, [pulse, pulseOpacity, pulseScale]);
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseScale.value }],
-    opacity: pulseOpacity.value,
-  }));
-
   return (
     <View style={[styles.container, compact && styles.compact, style]}>
-      <Animated.View
-        entering={FadeIn.duration(280).easing(Easing.out(Easing.cubic))}
-        style={styles.inner}
-      >
+      <View style={styles.inner}>
         <View style={styles.iconWrap}>
-          {pulse ? (
-            <Animated.View
-              style={[styles.pulseRing, { backgroundColor: iconColor }, pulseStyle]}
-            />
-          ) : null}
           <View style={[styles.iconCircle, { backgroundColor: iconBg }]}>
             <Ionicons name={icon} size={36} color={iconColor} />
           </View>
@@ -123,7 +76,7 @@ export function StateView({
             ))}
           </View>
         ) : null}
-      </Animated.View>
+      </View>
     </View>
   );
 }
@@ -157,12 +110,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 20,
     overflow: "visible",
-  },
-  pulseRing: {
-    position: "absolute",
-    width: 96,
-    height: 96,
-    borderRadius: 48,
   },
   iconCircle: {
     width: 96,
@@ -222,7 +169,6 @@ const styles = StyleSheet.create({
   },
   buttonPressed: {
     opacity: 0.88,
-    transform: [{ scale: 0.98 }],
   },
   buttonText: {
     color: COLORS.primaryForeground,
