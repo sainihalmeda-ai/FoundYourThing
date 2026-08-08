@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as SecureStore from "expo-secure-store";
 import { SESSION_DURATION_MS } from "../constants/config";
 
@@ -10,14 +11,28 @@ async function setItem(key: string, value: string): Promise<void> {
     localStorage.setItem(key, value);
     return;
   }
-  await SecureStore.setItemAsync(key, value);
+  try {
+    await SecureStore.setItemAsync(key, value);
+  } catch {
+    await AsyncStorage.setItem(key, value);
+  }
 }
 
 async function getItem(key: string): Promise<string | null> {
   if (Platform.OS === "web") {
     return localStorage.getItem(key);
   }
-  return SecureStore.getItemAsync(key);
+  try {
+    const secure = await SecureStore.getItemAsync(key);
+    if (secure != null) return secure;
+  } catch {
+    // Some devices / locked storage throw — fall through.
+  }
+  try {
+    return await AsyncStorage.getItem(key);
+  } catch {
+    return null;
+  }
 }
 
 async function deleteItem(key: string): Promise<void> {
@@ -29,6 +44,11 @@ async function deleteItem(key: string): Promise<void> {
     await SecureStore.deleteItemAsync(key);
   } catch {
     // Key may already be absent.
+  }
+  try {
+    await AsyncStorage.removeItem(key);
+  } catch {
+    // ignore
   }
 }
 

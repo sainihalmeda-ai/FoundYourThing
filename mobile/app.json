@@ -17,7 +17,7 @@
     "updates": {
       "url": "https://u.expo.dev/c42fe662-06fd-4195-aa8e-1cf332b5cb2b",
       "fallbackToCacheTimeout": 0,
-      "checkAutomatically": "ON_LOAD"
+      "checkAutomatically": "NEVER"
     },
     "ios": {
       "supportsTablet": true,

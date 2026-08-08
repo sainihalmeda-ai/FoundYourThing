@@ -40,8 +40,12 @@ export default function App() {
     return () => clearTimeout(id);
   }, []);
 
+  // Defer OTA — never block first paint. Updates apply on a later cold start.
   React.useEffect(() => {
-    void checkForAppUpdates();
+    const id = setTimeout(() => {
+      void checkForAppUpdates();
+    }, 8000);
+    return () => clearTimeout(id);
   }, []);
 
   if (!fontsLoaded && !fontsTimedOut) {

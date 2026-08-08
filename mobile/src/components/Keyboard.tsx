@@ -6,33 +6,19 @@ import {
   type ScrollViewProps,
   View,
 } from "react-native";
-import Constants from "expo-constants";
 
 /**
- * react-native-keyboard-controller is NOT bundled in Expo Go and crashes the
- * app with "Something went wrong." Use the native module only when linked;
- * fall back to KeyboardAvoidingView + ScrollView otherwise.
+ * Always use RN KeyboardAvoidingView + ScrollView.
+ *
+ * react-native-keyboard-controller is not in Expo Go and has crashed some
+ * release APKs at startup (native KeyboardProvider → permanent black screen).
+ * Prefer the built-in path everywhere so phone and web stay consistent.
  */
-const isExpoGo = Constants.appOwnership === "expo";
-
-function loadNativeKeyboard(): typeof import("react-native-keyboard-controller") | null {
-  if (isExpoGo) return null;
-  try {
-    return require("react-native-keyboard-controller") as typeof import("react-native-keyboard-controller");
-  } catch {
-    return null;
-  }
-}
 
 type ProviderProps = { children: React.ReactNode };
 
 export function KeyboardProvider({ children }: ProviderProps) {
-  const native = loadNativeKeyboard();
-  if (!native) {
-    return <View style={{ flex: 1 }}>{children}</View>;
-  }
-  const { KeyboardProvider: NativeProvider } = native;
-  return <NativeProvider>{children}</NativeProvider>;
+  return <View style={{ flex: 1 }}>{children}</View>;
 }
 
 type AwareProps = ScrollViewProps & {
@@ -45,36 +31,21 @@ export const KeyboardAwareScrollView = React.forwardRef<ScrollView, AwareProps>(
     { bottomOffset = 0, contentContainerStyle, children, ...rest },
     ref,
   ) {
-    const native = loadNativeKeyboard();
-    if (!native) {
-      return (
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
-          keyboardVerticalOffset={bottomOffset}
-        >
-          <ScrollView
-            ref={ref}
-            contentContainerStyle={contentContainerStyle}
-            keyboardShouldPersistTaps="handled"
-            {...rest}
-          >
-            {children}
-          </ScrollView>
-        </KeyboardAvoidingView>
-      );
-    }
-
-    const { KeyboardAwareScrollView: NativeAware } = native;
     return (
-      <NativeAware
-        ref={ref as never}
-        bottomOffset={bottomOffset}
-        contentContainerStyle={contentContainerStyle}
-        {...rest}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        keyboardVerticalOffset={bottomOffset}
       >
-        {children}
-      </NativeAware>
+        <ScrollView
+          ref={ref}
+          contentContainerStyle={contentContainerStyle}
+          keyboardShouldPersistTaps="handled"
+          {...rest}
+        >
+          {children}
+        </ScrollView>
+      </KeyboardAvoidingView>
     );
   },
 );
