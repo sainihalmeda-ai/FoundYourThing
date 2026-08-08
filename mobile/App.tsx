@@ -17,6 +17,7 @@ import {
 } from "@expo-google-fonts/manrope";
 import { AuthProvider } from "./src/context/AuthContext";
 import { ConnectionProvider } from "./src/context/ConnectionContext";
+import { ErrorBoundary } from "./src/components/ErrorBoundary";
 import { KeyboardProvider } from "./src/components/Keyboard";
 import { AppNavigator } from "./src/navigation/AppNavigator";
 import { COLORS } from "./src/constants/config";
@@ -34,7 +35,7 @@ export default function App() {
   const [fontsTimedOut, setFontsTimedOut] = React.useState(false);
 
   React.useEffect(() => {
-    const id = setTimeout(() => setFontsTimedOut(true), 4000);
+    const id = setTimeout(() => setFontsTimedOut(true), 2500);
     return () => clearTimeout(id);
   }, []);
 
@@ -45,24 +46,26 @@ export default function App() {
           flex: 1,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: COLORS.background,
+          backgroundColor: COLORS.inkTop,
         }}
       >
-        <ActivityIndicator color={COLORS.accent} size="large" />
+        <ActivityIndicator color="#FFFFFF" size="large" />
       </View>
     );
   }
 
   return (
-    <SafeAreaProvider>
-      <KeyboardProvider>
-        <ConnectionProvider>
-          <AuthProvider>
-            <AppNavigator />
-            <StatusBar style="dark" />
-          </AuthProvider>
-        </ConnectionProvider>
-      </KeyboardProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <KeyboardProvider>
+          <ConnectionProvider>
+            <AuthProvider>
+              <AppNavigator />
+              <StatusBar style="light" />
+            </AuthProvider>
+          </ConnectionProvider>
+        </KeyboardProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

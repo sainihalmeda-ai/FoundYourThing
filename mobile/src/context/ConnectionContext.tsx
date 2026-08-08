@@ -105,7 +105,9 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const canUseApi = state === "online" || state === "slow";
+  // Allow login/report while the first health probe is still waking Render.
+  const canUseApi =
+    state === "online" || state === "slow" || state === "checking";
 
   const value = useMemo(
     () => ({ state, message, canUseApi, refresh, dismissSlow }),

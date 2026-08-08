@@ -108,19 +108,16 @@ function devServerApiUrl(): string | null {
   return host ? `http://${host}:${API_PORT}` : null;
 }
 
+/** Live API — always used as last resort so a missing env never blank-screens the APK. */
+export const PRODUCTION_API_URL = "https://foundyourthing-api.onrender.com";
+
 const resolvedApiBaseUrl =
   (__DEV__ ? devServerApiUrl() : null) ??
   process.env.EXPO_PUBLIC_API_URL ??
   (typeof window !== "undefined" && window.location?.hostname
     ? `${window.location.protocol}//${window.location.hostname}:8000`
-    : null);
-
-if (!resolvedApiBaseUrl) {
-  throw new Error(
-    "EXPO_PUBLIC_API_URL is not set. Production / APK builds must point at the live API " +
-      "(e.g. https://foundyourthing-api.onrender.com).",
-  );
-}
+    : null) ??
+  PRODUCTION_API_URL;
 
 export const API_BASE_URL = resolvedApiBaseUrl;
 
@@ -140,10 +137,10 @@ export const MAX_RETRIES = 2;
  * Free Render spins down after idle — first health check can take 30–60s.
  * A short probe makes the phone show “server down” while the API is still waking.
  */
-export const HEALTH_TIMEOUT_MS = 25000;
+export const HEALTH_TIMEOUT_MS = 20000;
 /** Extra patience on first open / after a failed wake. */
-export const HEALTH_COLD_START_TIMEOUT_MS = 60000;
-export const HEALTH_COLD_START_ATTEMPTS = 4;
+export const HEALTH_COLD_START_TIMEOUT_MS = 45000;
+export const HEALTH_COLD_START_ATTEMPTS = 2;
 /** Photo uploads travel far more bytes than any other call. */
 export const UPLOAD_TIMEOUT_MS = 90000;
 

@@ -10,21 +10,28 @@ import Constants from "expo-constants";
 
 /**
  * react-native-keyboard-controller is NOT bundled in Expo Go and crashes the
- * app with "Something went wrong." Use the native module only in dev builds /
- * production; fall back to KeyboardAvoidingView + ScrollView in Expo Go.
+ * app with "Something went wrong." Use the native module only when linked;
+ * fall back to KeyboardAvoidingView + ScrollView otherwise.
  */
 const isExpoGo = Constants.appOwnership === "expo";
+
+function loadNativeKeyboard(): typeof import("react-native-keyboard-controller") | null {
+  if (isExpoGo) return null;
+  try {
+    return require("react-native-keyboard-controller") as typeof import("react-native-keyboard-controller");
+  } catch {
+    return null;
+  }
+}
 
 type ProviderProps = { children: React.ReactNode };
 
 export function KeyboardProvider({ children }: ProviderProps) {
-  if (isExpoGo) {
+  const native = loadNativeKeyboard();
+  if (!native) {
     return <View style={{ flex: 1 }}>{children}</View>;
   }
-
-  // Lazy require so Expo Go never loads the unlinked native module.
-  const { KeyboardProvider: NativeProvider } =
-    require("react-native-keyboard-controller") as typeof import("react-native-keyboard-controller");
+  const { KeyboardProvider: NativeProvider } = native;
   return <NativeProvider>{children}</NativeProvider>;
 }
 
@@ -38,7 +45,8 @@ export const KeyboardAwareScrollView = React.forwardRef<ScrollView, AwareProps>(
     { bottomOffset = 0, contentContainerStyle, children, ...rest },
     ref,
   ) {
-    if (isExpoGo) {
+    const native = loadNativeKeyboard();
+    if (!native) {
       return (
         <KeyboardAvoidingView
           style={{ flex: 1 }}
@@ -57,8 +65,7 @@ export const KeyboardAwareScrollView = React.forwardRef<ScrollView, AwareProps>(
       );
     }
 
-    const { KeyboardAwareScrollView: NativeAware } =
-      require("react-native-keyboard-controller") as typeof import("react-native-keyboard-controller");
+    const { KeyboardAwareScrollView: NativeAware } = native;
     return (
       <NativeAware
         ref={ref as never}

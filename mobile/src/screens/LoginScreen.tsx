@@ -66,7 +66,7 @@ const EASE = Easing.bezier(0.4, 0, 0.2, 1);
 
 export function LoginScreen({ navigation, route }: Props) {
   const { login, register } = useAuth();
-  const { state, canUseApi, refresh } = useConnection();
+  const { state, refresh } = useConnection();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const wide = width >= 900;
@@ -136,12 +136,8 @@ export function LoginScreen({ navigation, route }: Props) {
       const errors = validateLogin(vtuId, password);
       setFieldErrors(errors);
       if (hasErrors(errors)) return;
-      if (!canUseApi) {
-        setFormError(
-          "Campus server is waking up or offline. Wait up to a minute, tap Retry on the banner, then sign in again.",
-        );
+      if (state === "server_down") {
         void refresh({ coldStart: true });
-        return;
       }
       setSubmitting(true);
       try {
@@ -162,12 +158,8 @@ export function LoginScreen({ navigation, route }: Props) {
     const errors = validateRegister(payload);
     setFieldErrors(errors);
     if (hasErrors(errors)) return;
-    if (!canUseApi) {
-      setFormError(
-        "Campus server is waking up or offline. Wait up to a minute, tap Retry on the banner, then try again.",
-      );
+    if (state === "server_down") {
       void refresh({ coldStart: true });
-      return;
     }
     setSubmitting(true);
     try {
