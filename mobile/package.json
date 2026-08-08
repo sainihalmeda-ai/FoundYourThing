@@ -42,7 +42,7 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "export:web": "expo export --platform web",
+    "export:web": "node ./scripts/fetch-apk.cjs && expo export --platform web",
     "build:apk": "npx eas-cli build -p android --profile preview",
     "update:preview": "npx eas-cli update --channel preview --message",
     "update:production": "npx eas-cli update --channel production --message"

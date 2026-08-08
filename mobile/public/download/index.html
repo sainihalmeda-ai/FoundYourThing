@@ -151,9 +151,17 @@
         Download FYT v1.0.2 (~76&nbsp;MB) hosted on this site. Use <strong>Chrome</strong> on
         Android — uninstall any old FYT first.
       </p>
-      <!-- Same-origin APK — avoids broken Expo CDN redirects on mobile Chrome. -->
-      <a class="btn" id="apk" href="/download/FYT.apk" rel="noopener">
-        Download FYT APK
+      <!--
+        Direct Expo artifact (works when /download/FYT.apk is not on the CDN yet).
+        After Render runs scripts/fetch-apk.cjs, same-origin /download/FYT.apk is preferred.
+      -->
+      <a
+        class="btn"
+        id="apk"
+        href="https://expo.dev/artifacts/eas/QcC0hwuRBifLJlvWCUNq7KfEFFXd2B6eeByCk5GYuOg.apk"
+        rel="noopener"
+      >
+        Download FYT APK v1.0.2
       </a>
       <p class="status" id="status"></p>
       <div class="hint">

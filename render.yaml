@@ -34,7 +34,7 @@ services:
   - type: web
     name: foundyourthing-web
     runtime: static
-    buildCommand: cd mobile && npm ci && EXPO_PUBLIC_API_URL=https://foundyourthing-api.onrender.com npx expo export --platform web
+    buildCommand: cd mobile && npm ci && node ./scripts/fetch-apk.cjs && EXPO_PUBLIC_API_URL=https://foundyourthing-api.onrender.com npx expo export --platform web
     staticPublishPath: mobile/dist
     routes:
       - type: rewrite
