@@ -9,7 +9,7 @@ const http = require("http");
 
 const APK_URL =
   process.env.FYT_APK_ARTIFACT_URL ||
-  "https://expo.dev/artifacts/eas/m0mO28OZt6enOiSVLaBesWoIRVFKbnr658XRQSrXFRc.apk";
+  "https://expo.dev/artifacts/eas/qmW7A61f54hhPwN_y1xwrA5kgGE1ElC1gqu5Wlcu-U0.apk";
 
 const outDir = path.join(__dirname, "..", "public", "download");
 const outFile = path.join(outDir, "FYT.apk");
