@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import {
   Image,
   Modal,
+  Platform,
   Pressable,
   StyleProp,
   StyleSheet,
@@ -14,7 +15,7 @@ import { COLORS, FONTS, RADIUS } from "../constants/config";
 
 type Props = {
   uri?: string | null;
-  /** Sizing for the frame (height/width/radius). */
+  /** Sizing for the frame (height/width/radius). Explicit height required on web. */
   style?: StyleProp<ViewStyle>;
   /** Tap opens a full-screen lightbox. Turn off inside pressable cards. */
   expandable?: boolean;
@@ -64,6 +65,9 @@ export function PhotoView({
           source={{ uri: uri as string }}
           style={styles.image}
           resizeMode="contain"
+          // Prevent web from rendering broken-image alt text into the layout.
+          accessibilityLabel={fallbackLabel || "Item photo"}
+          {...(Platform.OS === "web" ? ({ alt: "" } as object) : null)}
           onError={() => setFailed(true)}
         />
       ) : (
@@ -90,7 +94,12 @@ export function PhotoView({
         onRequestClose={() => setOpen(false)}
       >
         <Pressable style={styles.lightbox} onPress={() => setOpen(false)}>
-          <Image source={{ uri: uri as string }} style={styles.full} resizeMode="contain" />
+          <Image
+            source={{ uri: uri as string }}
+            style={styles.full}
+            resizeMode="contain"
+            {...(Platform.OS === "web" ? ({ alt: "" } as object) : null)}
+          />
           <View style={styles.close}>
             <Ionicons name="close" size={22} color="#FFFFFF" />
           </View>
@@ -103,6 +112,7 @@ export function PhotoView({
 const styles = StyleSheet.create({
   frame: {
     width: "100%",
+    minHeight: 160,
     backgroundColor: COLORS.inkTop,
     overflow: "hidden",
     justifyContent: "center",
@@ -122,7 +132,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   placeholderHint: {
-    fontFamily: FONTS.body,
+    fontFamily: FONTS.sans,
     fontSize: 12,
     lineHeight: 16,
     color: "rgba(255,255,255,0.65)",

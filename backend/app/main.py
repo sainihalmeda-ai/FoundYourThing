@@ -1,17 +1,21 @@
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.database import Base, SessionLocal, engine
+from app.database import Base, SessionLocal, engine, get_db
 from app.routers import auth, claims, items
 from app.schemas import HealthResponse
 from app.services.refresh_scores import refresh_embeddings_and_scores
+from app.services.schema_migrate import ensure_schema
+from app.services.storage import media_response
 
 Base.metadata.create_all(bind=engine)
+ensure_schema()
 
 # Recompute visual fingerprints + match % after embedding upgrades.
 try:
@@ -47,6 +51,12 @@ app.mount("/uploads", StaticFiles(directory=str(upload_dir)), name="uploads")
 app.include_router(auth.router, prefix="/api")
 app.include_router(items.router, prefix="/api")
 app.include_router(claims.router, prefix="/api")
+
+
+@app.get("/api/media/{filename}")
+def serve_item_photo(filename: str, db: Session = Depends(get_db)):
+    """Public item photos — loaded from Postgres so free Render disk wipes don't blank them."""
+    return media_response(filename, db)
 
 
 @app.get("/api/health", response_model=HealthResponse)

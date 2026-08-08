@@ -7,6 +7,7 @@ from sqlalchemy import (
     Enum,
     Float,
     ForeignKey,
+    LargeBinary,
     String,
     Text,
     JSON,
@@ -78,6 +79,8 @@ class Item(Base):
     description: Mapped[str] = mapped_column(Text, default="")
     location: Mapped[str] = mapped_column(String(80))
     image_path: Mapped[str] = mapped_column(String(255))
+    # Survives Render free-tier disk wipes (ephemeral /uploads).
+    image_data: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     image_embedding: Mapped[list | None] = mapped_column(JSON, nullable=True)
     text_embedding: Mapped[list | None] = mapped_column(JSON, nullable=True)
     status: Mapped[ItemStatus] = mapped_column(

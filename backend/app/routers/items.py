@@ -181,6 +181,7 @@ async def create_item(
         description=description.strip(),
         location=location,
         image_path=filename,
+        image_data=content,
         image_embedding=image_embedding_from_bytes(content),
         text_embedding=text_embedding_from_string(text_blob),
         is_urgent=is_urgent,
