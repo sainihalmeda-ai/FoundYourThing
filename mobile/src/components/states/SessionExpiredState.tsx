@@ -12,7 +12,7 @@ type Props = {
 
 export function SessionExpiredState({
   title = "Session expired",
-  message = "Your login session ended for security. Sign in again to keep browsing campus reports.",
+  message = "Your login ended for security. Sign in again to keep browsing campus reports.",
   onSignIn,
   compact,
 }: Props) {
@@ -32,12 +32,12 @@ export function SessionExpiredState({
 
   return (
     <StateView
-      icon="◎"
-      iconColor={COLORS.warning}
-      iconBg="#FFF4D6"
+      icon="lock-closed-outline"
+      iconColor="#A9791B"
+      iconBg="rgba(235,189,87,0.22)"
       title={title}
       message={message}
-      hint="This happens after long idle time or when the server rejects your token."
+      hint="This happens after idle time, or when the server rejects an old token."
       actions={actions}
       compact={compact}
     />

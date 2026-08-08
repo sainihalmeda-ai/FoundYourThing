@@ -61,11 +61,19 @@ export type ApiErrorKind =
 export class ApiError extends Error {
   kind: ApiErrorKind;
   status?: number;
+  /** Underlying platform error, kept for on-device debugging. */
+  detail?: string;
 
-  constructor(message: string, kind: ApiErrorKind, status?: number) {
+  constructor(
+    message: string,
+    kind: ApiErrorKind,
+    status?: number,
+    detail?: string,
+  ) {
     super(message);
     this.kind = kind;
     this.status = status;
+    this.detail = detail;
   }
 }
 

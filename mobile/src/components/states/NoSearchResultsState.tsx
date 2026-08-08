@@ -12,7 +12,7 @@ type Props = {
 
 export function NoSearchResultsState({
   query,
-  title = "No results found",
+  title = "No matches",
   message,
   onClear,
   compact,
@@ -24,9 +24,9 @@ export function NoSearchResultsState({
 
   return (
     <StateView
-      icon="?"
+      icon="search-outline"
       iconColor={COLORS.primary}
-      iconBg="#E8F0FA"
+      iconBg="rgba(15,39,80,0.08)"
       title={title}
       message={
         message ??

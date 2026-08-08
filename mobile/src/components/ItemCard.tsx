@@ -1,47 +1,67 @@
 import React from "react";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { resolveImageUrl } from "../api/client";
 import type { Item } from "../types";
-import { COLORS } from "../constants/config";
+import { PhotoView } from "./PhotoView";
+import { Badge } from "./Ui";
+import { COLORS, FONTS, RADIUS, SHADOW } from "../constants/config";
 
 export function ItemCard({
   item,
   onPress,
   isMine = false,
   onRaiseLostClaim,
+  onAnswerLost,
 }: {
   item: Item;
   onPress: () => void;
   isMine?: boolean;
-  /** Show “Raise lost claim” for active found items that aren’t yours. */
   onRaiseLostClaim?: () => void;
+  onAnswerLost?: () => void;
 }) {
-  const canRaise =
-    Boolean(onRaiseLostClaim) &&
-    item.item_type === "found" &&
+  const open =
     !isMine &&
     item.status !== "recovered" &&
     item.status !== "connected" &&
     item.status !== "claim_pending";
+  const canRaise = Boolean(onRaiseLostClaim) && item.item_type === "found" && open;
+  const canAnswer = Boolean(onAnswerLost) && item.item_type === "lost" && open;
 
   return (
-    <Pressable style={styles.card} onPress={onPress}>
-      <Image source={{ uri: resolveImageUrl(item.image_url) }} style={styles.image} />
-      <View style={styles.content}>
-        <View style={styles.badgeRow}>
-          <Text style={styles.badge}>{item.item_type === "lost" ? "LOST" : "FOUND"}</Text>
-          {isMine ? <Text style={styles.mineBadge}>YOURS</Text> : null}
-          {item.status === "connected" ? (
-            <Text style={styles.connectedBadge}>CONNECTED</Text>
-          ) : null}
-          {item.status === "recovered" ? (
-            <Text style={styles.returnedBadge}>RETURNED</Text>
-          ) : null}
+    <Pressable
+      style={({ pressed }) => [styles.card, pressed && { opacity: 0.94, transform: [{ scale: 0.99 }] }]}
+      onPress={onPress}
+    >
+      <View style={styles.imageWrap}>
+        <PhotoView
+          uri={resolveImageUrl(item.image_url)}
+          style={styles.image}
+          expandable={false}
+        />
+        <View style={styles.badgeOverlay} pointerEvents="none">
+          <Badge label={item.item_type === "lost" ? "Lost" : "Found"} tone={item.item_type} />
+          {isMine ? <Badge label="Yours" tone="mine" /> : null}
+          {item.status === "connected" ? <Badge label="Connected" tone="connected" /> : null}
+          {item.status === "recovered" ? <Badge label="Returned" tone="returned" /> : null}
+          {item.is_urgent ? <Badge label="Urgent" tone="urgent" /> : null}
         </View>
-        <Text style={styles.title}>{item.title}</Text>
-        <Text style={styles.meta}>{item.category_label} · {item.location}</Text>
-        <Text style={styles.vtu}>Reporter: {item.reporter_vtu_id}</Text>
-        {item.is_urgent ? <Text style={styles.urgent}>Urgent valuable</Text> : null}
+      </View>
+      <View style={styles.content}>
+        <Text style={styles.title} numberOfLines={2}>
+          {item.title}
+        </Text>
+        <View style={styles.metaRow}>
+          <View style={styles.metaLeft}>
+            <Ionicons name="location-outline" size={13} color={COLORS.textMuted} />
+            <Text style={styles.meta} numberOfLines={1}>
+              {item.category_label} · {item.location}
+            </Text>
+          </View>
+          <Text style={styles.vtu} numberOfLines={1}>
+            {item.reporter_vtu_id}
+          </Text>
+        </View>
         {canRaise ? (
           <Pressable
             style={styles.claimBtn}
@@ -50,7 +70,18 @@ export function ItemCard({
               onRaiseLostClaim?.();
             }}
           >
-            <Text style={styles.claimBtnText}>This looks like mine — raise lost claim</Text>
+            <Text style={styles.claimBtnText}>This looks like mine — raise claim</Text>
+          </Pressable>
+        ) : null}
+        {canAnswer ? (
+          <Pressable
+            style={styles.claimBtn}
+            onPress={(e) => {
+              e.stopPropagation?.();
+              onAnswerLost?.();
+            }}
+          >
+            <Text style={styles.claimBtnText}>Looks like I found it — raise found report</Text>
           </Pressable>
         ) : null}
       </View>
@@ -60,103 +91,78 @@ export function ItemCard({
 
 const styles = StyleSheet.create({
   card: {
-    flexDirection: "row",
-    backgroundColor: COLORS.surface,
-    borderRadius: 14,
+    backgroundColor: COLORS.card,
+    borderRadius: 20,
     overflow: "hidden",
-    marginBottom: 12,
+    marginBottom: 16,
     borderWidth: 1,
     borderColor: COLORS.border,
+    padding: 12,
+    ...SHADOW.soft,
+  },
+  imageWrap: {
+    position: "relative",
+    borderRadius: RADIUS.xl,
+    overflow: "hidden",
+    backgroundColor: COLORS.surfaceMuted,
   },
   image: {
-    width: 96,
-    height: 96,
-    backgroundColor: "#EEF2F7",
+    width: "100%",
+    height: 180,
   },
-  content: {
-    flex: 1,
-    padding: 12,
-  },
-  badge: {
-    alignSelf: "flex-start",
-    backgroundColor: "#E6F0FF",
-    color: COLORS.primary,
-    fontSize: 11,
-    fontWeight: "700",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    overflow: "hidden",
-  },
-  badgeRow: {
+  badgeOverlay: {
+    position: "absolute",
+    top: 12,
+    left: 12,
+    right: 12,
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
   },
-  mineBadge: {
-    backgroundColor: "#E3F6E8",
-    color: COLORS.success,
-    fontSize: 11,
-    fontWeight: "700",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    overflow: "hidden",
-  },
-  connectedBadge: {
-    backgroundColor: "#FFF4D6",
-    color: COLORS.warning,
-    fontSize: 11,
-    fontWeight: "700",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    overflow: "hidden",
-  },
-  returnedBadge: {
-    backgroundColor: "#E3F6E8",
-    color: COLORS.success,
-    fontSize: 11,
-    fontWeight: "700",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 999,
-    overflow: "hidden",
-  },
+  content: { paddingHorizontal: 8, paddingTop: 14, paddingBottom: 6 },
   title: {
-    marginTop: 6,
-    fontSize: 16,
-    fontWeight: "700",
+    fontSize: 15,
+    fontFamily: FONTS.sansSemi,
     color: COLORS.text,
+    letterSpacing: -0.2,
+    lineHeight: 22,
+  },
+  metaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    marginTop: 10,
+  },
+  metaLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
   meta: {
-    marginTop: 4,
+    flex: 1,
     color: COLORS.textMuted,
-    fontSize: 13,
+    fontSize: 12,
+    fontFamily: FONTS.sans,
   },
   vtu: {
-    marginTop: 6,
-    color: COLORS.primaryDark,
-    fontWeight: "600",
-    fontSize: 13,
-  },
-  urgent: {
-    marginTop: 4,
-    color: COLORS.warning,
-    fontWeight: "700",
-    fontSize: 12,
+    color: COLORS.textMuted,
+    fontFamily: FONTS.sansMedium,
+    fontSize: 11,
+    letterSpacing: -0.2,
   },
   claimBtn: {
-    marginTop: 10,
+    marginTop: 12,
     backgroundColor: COLORS.primary,
-    borderRadius: 10,
-    paddingVertical: 9,
-    paddingHorizontal: 10,
+    borderRadius: RADIUS.xl,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
     alignItems: "center",
   },
   claimBtnText: {
-    color: "#fff",
-    fontWeight: "700",
+    color: COLORS.primaryForeground,
+    fontFamily: FONTS.sansBold,
     fontSize: 12,
     textAlign: "center",
   },

@@ -104,6 +104,12 @@ class ClaimAgainstFound(BaseModel):
     message: str = Field(default="", max_length=300)
 
 
+class FoundAgainstLost(BaseModel):
+    lost_item_id: int
+    found_item_id: int
+    message: str = Field(default="", max_length=300)
+
+
 class ClaimRespond(BaseModel):
     accept: bool
 

@@ -13,7 +13,7 @@ type Props = {
 };
 
 export function SuccessState({
-  title = "Success",
+  title = "All set",
   message = "Your action completed successfully.",
   actionLabel,
   onAction,
@@ -35,13 +35,14 @@ export function SuccessState({
 
   return (
     <StateView
-      icon="✓"
+      icon="checkmark-circle"
       iconColor={COLORS.success}
-      iconBg="#E3F6E8"
+      iconBg="rgba(59,185,116,0.14)"
       title={title}
       message={message}
       actions={actions}
       compact={compact}
+      pulse
     />
   );
 }

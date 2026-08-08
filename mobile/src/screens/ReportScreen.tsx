@@ -1,24 +1,23 @@
 import React, { useEffect, useState } from "react";
-import {
-  Image,
-  Linking,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  View,
-} from "react-native";
+import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { KeyboardAwareScrollView } from "../components/Keyboard";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { claimAgainstFound, createItem, fetchItem, fetchMetadata } from "../api/auth";
+import {
+  claimAgainstFound,
+  createItem,
+  fetchItem,
+  fetchMetadata,
+  foundAgainstLost,
+} from "../api/auth";
 import { resolveImageUrl } from "../api/client";
 import { ConnectionBanner } from "../components/ConnectionBanner";
 import { ConnectionGate } from "../components/ConnectionGate";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingOverlay } from "../components/LoadingOverlay";
-import { Field, PrimaryButton, ScreenShell } from "../components/Ui";
+import { PhotoView } from "../components/PhotoView";
+import { AppButton, Chip, Field, PremiumSwitch, ScreenShell } from "../components/Ui";
 import {
   PermissionDeniedState,
   SuccessState,
@@ -27,16 +26,32 @@ import {
 import { useAuth } from "../context/AuthContext";
 import { useConnection } from "../context/ConnectionContext";
 import { appendImageToFormData } from "../lib/formData";
+import { compressForUpload } from "../lib/compressImage";
+import { inspectPhoto } from "../lib/photoFile";
+import {
+  deviceTimestamp,
+  liveCaptureProblem,
+  pickExifFields,
+} from "../lib/livePhoto";
 import { hasErrors, validateReport } from "../lib/validation";
 import { RootStackParamList } from "../navigation/types";
-import { COLORS } from "../constants/config";
+import { COLORS, FONTS, LIVEGO_ENABLED, RADIUS, SHADOW } from "../constants/config";
 import { ApiError } from "../types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Report">;
 
 export function ReportScreen({ route, navigation }: Props) {
-  const { mode, linkFoundId } = route.params;
+  const { mode, linkFoundId, linkLostId } = route.params;
+  /** Owner answering a found item on the feed with their own lost report. */
   const linkingFound = mode === "lost" && Boolean(linkFoundId);
+  /** Finder answering a lost report on the feed with the item they picked up. */
+  const linkingLost = mode === "found" && Boolean(linkLostId);
+  const linkedItemId = linkFoundId ?? linkLostId;
+  /** LiveGo: finders must shoot the item live, blocking reposts of someone else's picture. */
+  const liveOnly = LIVEGO_ENABLED && mode === "found";
+  /** Only native builds get a real camera app; the web uses the file dialog. */
+  const hasCamera = Platform.OS !== "web";
+  const cameraOnly = liveOnly && hasCamera;
   const { token } = useAuth();
   const { canUseApi } = useConnection();
   const [loadingMeta, setLoadingMeta] = useState(true);
@@ -47,8 +62,8 @@ export function ReportScreen({ route, navigation }: Props) {
   );
   const [successItemId, setSuccessItemId] = useState<number | null>(null);
   const [claimSent, setClaimSent] = useState(false);
-  const [foundPreviewUrl, setFoundPreviewUrl] = useState<string | null>(null);
-  const [foundPreviewTitle, setFoundPreviewTitle] = useState<string | null>(null);
+  const [linkedPreviewUrl, setLinkedPreviewUrl] = useState<string | null>(null);
+  const [linkedPreviewTitle, setLinkedPreviewTitle] = useState<string | null>(null);
   const [categories, setCategories] = useState<{ id: string; label: string }[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
   const [category, setCategory] = useState("");
@@ -57,6 +72,8 @@ export function ReportScreen({ route, navigation }: Props) {
   const [description, setDescription] = useState("");
   const [isUrgent, setIsUrgent] = useState(mode === "lost");
   const [photo, setPhoto] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [photoSource, setPhotoSource] = useState<"camera" | "gallery" | null>(null);
+  const [photoKey, setPhotoKey] = useState(0);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -72,13 +89,13 @@ export function ReportScreen({ route, navigation }: Props) {
       let nextCategory = meta.categories[0]?.id ?? "";
       let nextLocation = meta.locations[0] ?? "";
 
-      if (linkFoundId) {
-        const found = await fetchItem(token, linkFoundId);
-        setFoundPreviewUrl(resolveImageUrl(found.image_url));
-        setFoundPreviewTitle(found.title);
-        if (found.category) nextCategory = found.category;
-        if (found.location) nextLocation = found.location;
-        setTitle((prev) => prev || found.title);
+      if (linkedItemId) {
+        const linked = await fetchItem(token, linkedItemId);
+        setLinkedPreviewUrl(resolveImageUrl(linked.image_url));
+        setLinkedPreviewTitle(linked.title);
+        if (linked.category) nextCategory = linked.category;
+        if (linked.location) nextLocation = linked.location;
+        setTitle((prev) => prev || linked.title);
       }
 
       setCategory(nextCategory);
@@ -92,15 +109,32 @@ export function ReportScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     loadMeta();
-  }, [token, linkFoundId]);
+  }, [token, linkedItemId]);
 
-  const applyPickedPhoto = (asset: ImagePicker.ImagePickerAsset) => {
-    setPhoto(asset);
+  const applyPickedPhoto = (
+    asset: ImagePicker.ImagePickerAsset,
+    source: "camera" | "gallery",
+  ) => {
     setPermissionDenied(null);
+
+    if (cameraOnly) {
+      const problem = liveCaptureProblem(pickExifFields(asset.exif));
+      if (problem) {
+        setPhoto(null);
+        setPhotoSource(null);
+        setFieldErrors((prev) => ({ ...prev, photo: problem }));
+        return;
+      }
+    }
+
+    setPhoto(asset);
+    setPhotoSource(source);
+    setPhotoKey((value) => value + 1);
     setFieldErrors((prev) => ({ ...prev, photo: "" }));
   };
 
   const pickFromGallery = async () => {
+    if (cameraOnly) return;
     if (Platform.OS !== "web") {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
@@ -115,29 +149,42 @@ export function ReportScreen({ route, navigation }: Props) {
       mediaTypes: ["images"],
     });
     if (!result.canceled && result.assets[0]) {
-      applyPickedPhoto(result.assets[0]);
+      applyPickedPhoto(result.assets[0], "gallery");
     }
   };
 
   const takePhoto = async () => {
-    if (Platform.OS === "web") {
-      await pickFromGallery();
-      return;
-    }
-    const permission = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permission.granted) {
-      setPermissionDenied("camera");
-      return;
+    if (Platform.OS !== "web") {
+      const permission = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permission.granted) {
+        setPermissionDenied("camera");
+        return;
+      }
     }
     setPermissionDenied(null);
     const result = await ImagePicker.launchCameraAsync({
       quality: 0.7,
-      allowsEditing: true,
+      // Cropping is disabled for found reports so the live frame stays intact.
+      allowsEditing: !liveOnly,
+      cameraType: ImagePicker.CameraType.back,
+      exif: true,
     });
     if (!result.canceled && result.assets[0]) {
-      applyPickedPhoto(result.assets[0]);
+      applyPickedPhoto(result.assets[0], "camera");
     }
   };
+
+  // A desktop browser has no camera app, and a phone browser already offers the
+  // camera inside its file dialog, so one button covers the web on every device.
+  const singlePhotoButton = liveOnly || !hasCamera;
+  const choosePhoto = cameraOnly ? takePhoto : pickFromGallery;
+  const photoHint = cameraOnly
+    ? "Tap here to capture the item"
+    : liveOnly
+      ? "Tap here to pick the photo you just took"
+      : hasCamera
+        ? "Tap here, or use Gallery or Camera above"
+        : "Tap here to choose a photo of the item";
 
   const submit = async () => {
     if (!token || !photo) return;
@@ -150,6 +197,9 @@ export function ReportScreen({ route, navigation }: Props) {
       location,
       hasPhoto: Boolean(photo),
     });
+    if (cameraOnly && photoSource !== "camera") {
+      errors.photo = "Found reports need a live camera photo taken here in the app.";
+    }
     setFieldErrors(errors);
     if (hasErrors(errors)) return;
 
@@ -167,42 +217,73 @@ export function ReportScreen({ route, navigation }: Props) {
       form.append("description", description.trim());
       form.append("location", location);
       form.append("is_urgent", String(isUrgent));
-      await appendImageToFormData(form, "image", photo);
+      form.append("client_exif", JSON.stringify(pickExifFields(photo.exif)));
+      form.append("client_now", deviceTimestamp());
+      // Camera photos are several megabytes; shrink before sending, but only
+      // trust the shrunk copy if it actually landed on disk.
+      const resized = await compressForUpload(photo);
+      const resizedInfo = inspectPhoto(resized.uri);
+      const upload = resizedInfo.exists && resizedInfo.size !== 0 ? resized : photo;
+      if (__DEV__) {
+        console.log(
+          `[report] uploading ${upload.uri} (${resizedInfo.size ?? "?"} bytes, ` +
+            `${upload === photo ? "original" : "resized"})`,
+        );
+      }
+      await appendImageToFormData(form, "image", upload);
 
       const item = await createItem(token, form);
 
       if (linkingFound && linkFoundId) {
         await claimAgainstFound(token, linkFoundId, item.id);
         setClaimSent(true);
+      } else if (linkingLost && linkLostId) {
+        await foundAgainstLost(token, linkLostId, item.id);
+        setClaimSent(true);
       }
 
       setSuccessItemId(item.id);
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Upload failed. Try again.");
+      const base =
+        err instanceof ApiError
+          ? err.kind === "offline" || err.kind === "timeout"
+            ? `${err.message} Your photo is still here — press the button again once you have signal.`
+            : err.message
+          : "Upload failed. Try again.";
+      const detail = err instanceof ApiError ? err.detail : String(err);
+      setFormError(__DEV__ && detail ? `${base}\n[debug] ${detail}` : base);
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (loadingMeta) return <LoadingOverlay label="Loading form..." />;
+  if (loadingMeta) {
+    return (
+      <LoadingOverlay label="Preparing report" hint="Loading categories and campus locations…" />
+    );
+  }
   if (error) return <ErrorState error={error} onRetry={loadMeta} />;
 
   if (successItemId != null) {
     return (
       <SuccessState
         title={
-          claimSent
-            ? "Lost claim sent"
-            : mode === "lost"
-              ? "Lost report live"
-              : "Found report live"
+          linkingLost && claimSent
+            ? "Owner notified"
+            : claimSent
+              ? "Lost claim sent"
+              : mode === "lost"
+                ? "Lost report live"
+                : "Found report live"
         }
         message={
-          claimSent
-            ? "Your lost report is live and a contact request was sent to the finder. They’ll see both photos in a popup."
-            : mode === "lost"
-              ? "Campus users can now see your report. Only your VTU ID is public."
-              : "AI is checking for possible owners. Matches appear on the item page."
+          linkingLost && claimSent
+            ? "Your found report is live and the owner was told you may have their item. They’ll see both photos and decide whether to share contact."
+            : claimSent
+              ? "Your lost report is live and a contact request was sent to the finder. They’ll see both photos in a popup."
+              : mode === "lost"
+                ? "Campus users can now see your report. Only your VTU ID is public."
+                : "AI is checking for possible owners. Matches appear on the item page."
         }
         actionLabel="View your report"
         onAction={() => navigation.replace("ItemDetail", { itemId: successItemId })}
@@ -220,7 +301,9 @@ export function ReportScreen({ route, navigation }: Props) {
         message={
           isGallery
             ? "Allow gallery access so you can upload an existing photo of the item."
-            : "Allow camera access to take a clear photo of the item."
+            : liveOnly
+              ? "Found reports need a live photo. Allow camera access to capture the item."
+              : "Allow camera access to take a clear photo of the item."
         }
         onRetry={isGallery ? pickFromGallery : takePhoto}
         onOpenSettings={() => Linking.openSettings()}
@@ -232,65 +315,143 @@ export function ReportScreen({ route, navigation }: Props) {
     <ConnectionGate>
       <View style={styles.root}>
         <ConnectionBanner />
-        <ScrollView>
+        <KeyboardAwareScrollView bottomOffset={24} keyboardShouldPersistTaps="handled">
           <ScreenShell
             title={
               linkingFound
                 ? "Raise lost claim"
-                : mode === "lost"
-                  ? "Report lost valuable"
-                  : "Report found valuable"
+                : linkingLost
+                  ? "I found this item"
+                  : mode === "lost"
+                    ? "Report lost valuable"
+                    : "Report found valuable"
             }
             subtitle={
               linkingFound
                 ? "You’re claiming a found item from the campus feed. Add your photo and details — the finder will get a request with both pictures."
-                : "Low-value items like pens and pencils are rejected. Upload one clear photo."
+                : linkingLost
+                  ? "You’re answering a lost report from the campus feed. Add a photo of the item you picked up — the owner will compare both pictures and decide."
+                  : liveOnly
+                    ? "Low-value items like pens and pencils are rejected. Take one live photo of the item you found."
+                    : "Low-value items like pens and pencils are rejected. Upload one clear photo."
             }
           >
-            {linkingFound && foundPreviewUrl ? (
+            {linkedPreviewUrl ? (
               <View style={styles.foundRef}>
-                <Text style={styles.foundRefLabel}>Found item you’re claiming</Text>
-                <Image source={{ uri: foundPreviewUrl }} style={styles.foundRefImage} />
-                {foundPreviewTitle ? (
-                  <Text style={styles.foundRefTitle}>{foundPreviewTitle}</Text>
+                <Text style={styles.foundRefLabel}>
+                  {linkingLost ? "Lost report you’re answering" : "Found item you’re claiming"}
+                </Text>
+                <PhotoView uri={linkedPreviewUrl} style={styles.foundRefImage} />
+                {linkedPreviewTitle ? (
+                  <Text style={styles.foundRefTitle}>{linkedPreviewTitle}</Text>
                 ) : null}
               </View>
             ) : null}
 
-            <View style={[styles.photoBox, fieldErrors.photo ? styles.photoError : null]}>
-              {photo ? (
-                <Image source={{ uri: photo.uri }} style={styles.photo} />
+            {liveOnly ? (
+              <View style={styles.liveNote}>
+                <Ionicons name="camera" size={16} color={COLORS.accent} />
+                <Text style={styles.liveNoteText}>
+                  {hasCamera
+                    ? "Live photo required. We read the photo’s camera data, so downloaded or edited pictures are rejected — shoot the item in front of you."
+                    : "This browser has no camera. Upload an unedited photo you just took on your phone — we read its camera data and reject downloaded or edited images."}
+                </Text>
+              </View>
+            ) : null}
+
+            <View style={styles.photoActions}>
+              {singlePhotoButton ? (
+                <Pressable
+                  style={[styles.photoActionBtn, styles.photoActionActive]}
+                  onPress={choosePhoto}
+                >
+                  <Text style={[styles.photoActionText, styles.photoActionTextActive]}>
+                    {cameraOnly
+                      ? photo
+                        ? "Retake live photo"
+                        : "Take live photo"
+                      : photo
+                        ? "Change photo"
+                        : "Choose photo"}
+                  </Text>
+                </Pressable>
               ) : (
-                <Text style={styles.photoHint}>Add one clear photo of the item</Text>
+                <>
+                  <Pressable
+                    style={[
+                      styles.photoActionBtn,
+                      photoSource !== "camera" && styles.photoActionActive,
+                    ]}
+                    onPress={pickFromGallery}
+                  >
+                    <Text
+                      style={[
+                        styles.photoActionText,
+                        photoSource !== "camera" && styles.photoActionTextActive,
+                      ]}
+                    >
+                      Gallery
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    style={[
+                      styles.photoActionBtn,
+                      photoSource === "camera" && styles.photoActionActive,
+                    ]}
+                    onPress={takePhoto}
+                  >
+                    <Text
+                      style={[
+                        styles.photoActionText,
+                        photoSource === "camera" && styles.photoActionTextActive,
+                      ]}
+                    >
+                      Camera
+                    </Text>
+                  </Pressable>
+                </>
               )}
             </View>
-            <View style={styles.photoActions}>
-              <Pressable style={styles.photoActionBtn} onPress={pickFromGallery}>
-                <Text style={styles.photoActionText}>Gallery</Text>
+            {photo ? (
+              // Keyed on the pick counter so a replacement image always remounts.
+              <PhotoView key={photoKey} uri={photo.uri} style={styles.photoPreview} />
+            ) : (
+              <Pressable
+                onPress={choosePhoto}
+                style={({ pressed }) => [
+                  styles.photoBox,
+                  fieldErrors.photo ? styles.photoError : null,
+                  pressed ? styles.photoBoxPressed : null,
+                ]}
+              >
+                <Ionicons
+                  name={cameraOnly ? "camera-outline" : "image-outline"}
+                  size={26}
+                  color={COLORS.accent}
+                />
+                <Text style={styles.photoHint}>{photoHint}</Text>
               </Pressable>
-              {Platform.OS !== "web" ? (
-                <Pressable style={styles.photoActionBtn} onPress={takePhoto}>
-                  <Text style={styles.photoActionText}>Camera</Text>
-                </Pressable>
-              ) : null}
-            </View>
+            )}
+            {liveOnly && photo && photoSource === "camera" ? (
+              <View style={styles.liveBadge}>
+                <Ionicons name="shield-checkmark" size={13} color={COLORS.success} />
+                <Text style={styles.liveBadgeText}>Live photo captured in app</Text>
+              </View>
+            ) : null}
             <ValidationMessage message={fieldErrors.photo} field />
 
             <Text style={styles.label}>Category</Text>
             <View style={styles.chips}>
               {categories.map((item) => (
-                <Pressable
+                <Chip
                   key={item.id}
-                  style={[styles.chip, category === item.id && styles.chipActive]}
+                  label={item.label}
+                  active={category === item.id}
                   onPress={() => {
                     setCategory(item.id);
                     setFieldErrors((prev) => ({ ...prev, category: "" }));
                   }}
-                >
-                  <Text style={[styles.chipText, category === item.id && styles.chipTextActive]}>
-                    {item.label}
-                  </Text>
-                </Pressable>
+                />
               ))}
             </View>
             <ValidationMessage message={fieldErrors.category} field />
@@ -321,145 +482,180 @@ export function ReportScreen({ route, navigation }: Props) {
             <Text style={styles.label}>Location</Text>
             <View style={styles.chips}>
               {locations.map((loc) => (
-                <Pressable
+                <Chip
                   key={loc}
-                  style={[styles.chip, location === loc && styles.chipActive]}
+                  label={loc}
+                  active={location === loc}
                   onPress={() => {
                     setLocation(loc);
                     setFieldErrors((prev) => ({ ...prev, location: "" }));
                   }}
-                >
-                  <Text style={[styles.chipText, location === loc && styles.chipTextActive]}>{loc}</Text>
-                </Pressable>
+                />
               ))}
             </View>
             <ValidationMessage message={fieldErrors.location} field />
 
-            <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>Urgent campus alert (valuables only)</Text>
-              <Switch value={isUrgent} onValueChange={setIsUrgent} />
-            </View>
+            {mode === "lost" ? (
+              <PremiumSwitch
+                label="Urgent campus alert — pin near top of feed"
+                value={isUrgent}
+                onValueChange={setIsUrgent}
+              />
+            ) : null}
 
             <ValidationMessage message={formError} />
 
-            <PrimaryButton
+            <AppButton
               label={
                 submitting
-                  ? linkingFound
-                    ? "Sending claim..."
-                    : "Uploading..."
+                  ? linkingFound || linkingLost
+                    ? "Sending to the other student…"
+                    : "Posting your report…"
                   : linkingFound
                     ? "Submit lost claim"
-                    : "Submit report"
+                    : linkingLost
+                      ? "Notify the owner"
+                      : mode === "lost"
+                        ? "Post lost report"
+                        : "Post found report"
               }
               onPress={submit}
               disabled={submitting}
+              loading={submitting}
             />
           </ScreenShell>
-        </ScrollView>
+        </KeyboardAwareScrollView>
       </View>
     </ConnectionGate>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
+  root: { flex: 1, backgroundColor: COLORS.background },
   foundRef: {
     marginBottom: 14,
-    padding: 12,
-    borderRadius: 12,
+    padding: 14,
+    borderRadius: RADIUS["2xl"],
     borderWidth: 1,
     borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.card,
   },
   foundRefLabel: {
     fontSize: 12,
-    fontWeight: "700",
+    fontFamily: FONTS.sansBold,
     color: COLORS.textMuted,
     marginBottom: 8,
   },
   foundRefImage: {
     width: "100%",
     height: 140,
-    borderRadius: 10,
-    backgroundColor: "#EEF2F7",
+    borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.surfaceMuted,
   },
   foundRefTitle: {
     marginTop: 8,
-    fontWeight: "700",
+    fontFamily: FONTS.sansBold,
     color: COLORS.text,
   },
-  photoBox: {
-    height: 180,
-    borderRadius: 14,
+  liveNote: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: RADIUS["2xl"],
+    backgroundColor: "rgba(0,156,165,0.1)",
     borderWidth: 1,
+    borderColor: "rgba(0,156,165,0.25)",
+  },
+  liveNoteText: {
+    flex: 1,
+    fontFamily: FONTS.sansMedium,
+    fontSize: 12,
+    lineHeight: 18,
+    color: COLORS.text,
+  },
+  liveBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 4,
+  },
+  liveBadgeText: {
+    fontFamily: FONTS.sansSemi,
+    fontSize: 12,
+    color: COLORS.success,
+  },
+  photoBox: {
+    height: 220,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderStyle: "dashed",
     borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.card,
     alignItems: "center",
     justifyContent: "center",
+    gap: 10,
     marginBottom: 8,
     overflow: "hidden",
+  },
+  photoBoxPressed: {
+    backgroundColor: COLORS.surfaceMuted,
   },
   photoError: {
     borderColor: COLORS.danger,
   },
-  photo: { width: "100%", height: "100%" },
-  photoHint: { color: COLORS.textMuted },
+  photoPreview: {
+    height: 220,
+    borderRadius: 20,
+    marginBottom: 8,
+  },
+  photoHint: {
+    color: COLORS.textMuted,
+    fontFamily: FONTS.sansMedium,
+    textAlign: "center",
+    paddingHorizontal: 20,
+  },
   photoActions: {
     flexDirection: "row",
-    gap: 10,
+    gap: 0,
     marginBottom: 12,
+    backgroundColor: COLORS.surfaceMuted,
+    borderRadius: RADIUS.pill,
+    padding: 4,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   photoActionBtn: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderRadius: RADIUS.pill,
+    paddingVertical: 10,
     alignItems: "center",
   },
+  photoActionActive: {
+    backgroundColor: COLORS.card,
+    ...SHADOW.soft,
+  },
   photoActionText: {
-    color: COLORS.primary,
-    fontWeight: "700",
-    fontSize: 14,
+    color: COLORS.textMuted,
+    fontFamily: FONTS.sansMedium,
+    fontSize: 12,
+  },
+  photoActionTextActive: {
+    color: COLORS.text,
+    fontFamily: FONTS.sansSemi,
   },
   label: {
     fontSize: 13,
-    fontWeight: "600",
+    fontFamily: FONTS.sansSemi,
     color: COLORS.text,
     marginBottom: 8,
+    marginTop: 6,
   },
   chips: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-    marginBottom: 4,
-  },
-  chip: {
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 999,
-  },
-  chipActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  chipText: { color: COLORS.text, fontSize: 12 },
-  chipTextActive: { color: "#fff", fontWeight: "700" },
-  switchRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 16,
-    gap: 12,
-  },
-  switchLabel: {
-    flex: 1,
-    color: COLORS.text,
-    fontWeight: "600",
+    marginBottom: 8,
   },
 });

@@ -24,9 +24,9 @@ export function EmptyState({
 
   return (
     <StateView
-      icon="∅"
-      iconColor={COLORS.textMuted}
-      iconBg="#E8EEF4"
+      icon="file-tray-outline"
+      iconColor={COLORS.accent}
+      iconBg={COLORS.card}
       title={title}
       message={message}
       actions={actions}

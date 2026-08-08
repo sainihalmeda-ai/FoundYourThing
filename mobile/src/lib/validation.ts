@@ -2,12 +2,22 @@
 
 export type FieldErrors = Record<string, string>;
 
+/** Students carry a VTU number, staff a TTS number. Nobody else belongs here. */
+const CAMPUS_ID = /^(VTU|TTS)[A-Z0-9]{3,17}$/;
+
+const CAMPUS_ID_ERROR =
+  "Use your college ID: VTU number for students, TTS number for staff.";
+
+export function isCampusId(value: string): boolean {
+  return CAMPUS_ID.test(value.trim().toUpperCase());
+}
+
 export function validateLogin(vtuId: string, password: string): FieldErrors {
   const errors: FieldErrors = {};
   if (!vtuId.trim()) {
-    errors.vtuId = "VTU ID is required.";
-  } else if (vtuId.trim().length < 4) {
-    errors.vtuId = "Enter a valid VTU ID.";
+    errors.vtuId = "College ID is required.";
+  } else if (!isCampusId(vtuId)) {
+    errors.vtuId = CAMPUS_ID_ERROR;
   }
   if (!password) {
     errors.password = "Password is required.";
@@ -26,7 +36,11 @@ export function validateRegister(form: {
   password: string;
 }): FieldErrors {
   const errors: FieldErrors = {};
-  if (!form.vtu_id.trim()) errors.vtu_id = "VTU ID is required.";
+  if (!form.vtu_id.trim()) {
+    errors.vtu_id = "College ID is required.";
+  } else if (!isCampusId(form.vtu_id)) {
+    errors.vtu_id = CAMPUS_ID_ERROR;
+  }
   if (!form.full_name.trim()) errors.full_name = "Full name is required.";
   if (!form.department.trim()) errors.department = "Department is required.";
   if (!form.email.trim()) {

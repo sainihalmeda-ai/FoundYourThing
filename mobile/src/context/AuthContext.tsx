@@ -95,6 +95,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    const safety = setTimeout(() => {
+      if (!cancelled) setLoading(false);
+    }, 5000);
+
     (async () => {
       try {
         await refreshProfile();
@@ -104,9 +109,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(null);
         setSessionExpiresAt(null);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
+        clearTimeout(safety);
       }
     })();
+
+    return () => {
+      cancelled = true;
+      clearTimeout(safety);
+    };
   }, [refreshProfile]);
 
   // Tick the countdown every second while logged in.
@@ -132,7 +143,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(
     async (vtuId: string, password: string) => {
       const result = await loginUser(vtuId, password);
-      await applySession(result.access_token, result.user);
+      // Prefer /me so full_name is available for Home greeting.
+      try {
+        const profile = await fetchMe(result.access_token);
+        await applySession(result.access_token, profile);
+      } catch {
+        await applySession(result.access_token, result.user);
+      }
     },
     [applySession],
   );
@@ -147,7 +164,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password: string;
     }) => {
       const result = await registerUser(payload);
-      await applySession(result.access_token, result.user);
+      try {
+        const profile = await fetchMe(result.access_token);
+        await applySession(result.access_token, profile);
+      } catch {
+        await applySession(result.access_token, result.user);
+      }
     },
     [applySession],
   );

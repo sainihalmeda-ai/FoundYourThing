@@ -1,6 +1,16 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Pressable, StyleSheet, Text, View, ViewStyle } from "react-native";
-import { COLORS } from "../../constants/config";
+import { Ionicons } from "@expo/vector-icons";
+import Animated, {
+  Easing,
+  FadeIn,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
+import { COLORS, FONTS, RADIUS, SHADOW } from "../../constants/config";
 
 export type StateAction = {
   label: string;
@@ -8,8 +18,11 @@ export type StateAction = {
   variant?: "primary" | "secondary";
 };
 
+type IconName = React.ComponentProps<typeof Ionicons>["name"];
+
 type Props = {
-  icon: string;
+  /** Ionicons glyph name, e.g. "cloud-offline-outline" */
+  icon: IconName;
   iconColor?: string;
   iconBg?: string;
   title: string;
@@ -17,51 +30,100 @@ type Props = {
   hint?: string;
   actions?: StateAction[];
   compact?: boolean;
+  /** Soft pulse behind the icon — nice for loading-adjacent empty states */
+  pulse?: boolean;
   style?: ViewStyle;
 };
 
 export function StateView({
   icon,
-  iconColor = COLORS.primary,
-  iconBg = "#E8F0FA",
+  iconColor = COLORS.accent,
+  iconBg = COLORS.card,
   title,
   message,
   hint,
   actions = [],
   compact = false,
+  pulse = false,
   style,
 }: Props) {
+  const pulseScale = useSharedValue(1);
+  const pulseOpacity = useSharedValue(0.45);
+
+  useEffect(() => {
+    if (!pulse) return;
+    pulseScale.value = withRepeat(
+      withSequence(
+        withTiming(1.35, { duration: 1100, easing: Easing.out(Easing.quad) }),
+        withTiming(1, { duration: 1100, easing: Easing.in(Easing.quad) }),
+      ),
+      -1,
+      false,
+    );
+    pulseOpacity.value = withRepeat(
+      withSequence(
+        withTiming(0.12, { duration: 1100 }),
+        withTiming(0.4, { duration: 1100 }),
+      ),
+      -1,
+      false,
+    );
+  }, [pulse, pulseOpacity, pulseScale]);
+
+  const pulseStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+    opacity: pulseOpacity.value,
+  }));
+
   return (
     <View style={[styles.container, compact && styles.compact, style]}>
-      <View style={[styles.iconCircle, { backgroundColor: iconBg }]}>
-        <Text style={[styles.icon, { color: iconColor }]}>{icon}</Text>
-      </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.message}>{message}</Text>
-      {hint ? <Text style={styles.hint}>{hint}</Text> : null}
-      {actions.length > 0 ? (
-        <View style={styles.actions}>
-          {actions.map((action) => (
-            <Pressable
-              key={action.label}
-              style={[
-                styles.button,
-                action.variant === "secondary" ? styles.buttonSecondary : styles.buttonPrimary,
-              ]}
-              onPress={action.onPress}
-            >
-              <Text
-                style={[
-                  styles.buttonText,
-                  action.variant === "secondary" && styles.buttonTextSecondary,
-                ]}
-              >
-                {action.label}
-              </Text>
-            </Pressable>
-          ))}
+      <Animated.View
+        entering={FadeIn.duration(280).easing(Easing.out(Easing.cubic))}
+        style={styles.inner}
+      >
+        <View style={styles.iconWrap}>
+          {pulse ? (
+            <Animated.View
+              style={[styles.pulseRing, { backgroundColor: iconColor }, pulseStyle]}
+            />
+          ) : null}
+          <View style={[styles.iconCircle, { backgroundColor: iconBg }]}>
+            <Ionicons name={icon} size={36} color={iconColor} />
+          </View>
         </View>
-      ) : null}
+
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.message}>{message}</Text>
+        {hint ? <Text style={styles.hint}>{hint}</Text> : null}
+
+        {actions.length > 0 ? (
+          <View style={styles.actions}>
+            {actions.map((action) => (
+              <Pressable
+                key={action.label}
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.button,
+                  action.variant === "secondary"
+                    ? styles.buttonSecondary
+                    : styles.buttonPrimary,
+                  pressed && styles.buttonPressed,
+                ]}
+                onPress={action.onPress}
+              >
+                <Text
+                  style={[
+                    styles.buttonText,
+                    action.variant === "secondary" && styles.buttonTextSecondary,
+                  ]}
+                >
+                  {action.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
+      </Animated.View>
     </View>
   );
 }
@@ -73,72 +135,101 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 28,
     backgroundColor: COLORS.background,
+    overflow: "visible",
   },
   compact: {
     flex: 0,
-    paddingVertical: 32,
+    paddingVertical: 48,
+    paddingTop: 56,
     backgroundColor: "transparent",
+    overflow: "visible",
   },
-  iconCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  inner: {
+    width: "100%",
+    maxWidth: 340,
+    alignItems: "center",
+    overflow: "visible",
+  },
+  iconWrap: {
+    width: 112,
+    height: 112,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 18,
+    marginBottom: 20,
+    overflow: "visible",
   },
-  icon: {
-    fontSize: 28,
-    fontWeight: "700",
+  pulseRing: {
+    position: "absolute",
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+  },
+  iconCircle: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    ...SHADOW.soft,
   },
   title: {
-    fontSize: 20,
-    fontWeight: "800",
+    fontSize: 24,
+    fontFamily: FONTS.display,
     color: COLORS.text,
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 10,
+    letterSpacing: -0.4,
   },
   message: {
-    fontSize: 15,
+    fontSize: 14,
+    fontFamily: FONTS.sans,
     color: COLORS.textMuted,
     textAlign: "center",
-    lineHeight: 22,
+    lineHeight: 21,
     maxWidth: 320,
   },
   hint: {
-    marginTop: 10,
+    marginTop: 12,
     fontSize: 13,
+    fontFamily: FONTS.sansMedium,
     color: COLORS.textMuted,
     textAlign: "center",
-    lineHeight: 20,
+    lineHeight: 19,
     maxWidth: 300,
-    opacity: 0.85,
+    opacity: 0.9,
   },
   actions: {
-    marginTop: 22,
+    marginTop: 24,
     width: "100%",
     maxWidth: 280,
     gap: 10,
   },
   button: {
-    paddingVertical: 13,
-    borderRadius: 12,
+    paddingVertical: 14,
+    borderRadius: RADIUS["2xl"],
     alignItems: "center",
   },
   buttonPrimary: {
     backgroundColor: COLORS.primary,
   },
   buttonSecondary: {
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.card,
     borderWidth: 1,
-    borderColor: COLORS.primary,
+    borderColor: COLORS.border,
+  },
+  buttonPressed: {
+    opacity: 0.88,
+    transform: [{ scale: 0.98 }],
   },
   buttonText: {
-    color: "#fff",
-    fontWeight: "700",
+    color: COLORS.primaryForeground,
+    fontFamily: FONTS.sansBold,
     fontSize: 15,
   },
   buttonTextSecondary: {
-    color: COLORS.primary,
+    color: COLORS.text,
   },
 });

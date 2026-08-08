@@ -1,35 +1,52 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FlatList,
+  LayoutChangeEvent,
   Pressable,
   RefreshControl,
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchItems } from "../api/auth";
 import { ConnectionBanner } from "../components/ConnectionBanner";
 import { ConnectionGate } from "../components/ConnectionGate";
+import { DaylightBackdrop } from "../components/SpatialBackdrop";
 import { ErrorState } from "../components/ErrorState";
+import { HomeButton } from "../components/HomeButton";
 import { ItemCard } from "../components/ItemCard";
 import { LoadingOverlay } from "../components/LoadingOverlay";
-import { ScreenShell } from "../components/Ui";
+import { PageEnter } from "../components/PageEnter";
 import {
   EmptyState,
   NoSearchResultsState,
 } from "../components/states";
 import { useAuth } from "../context/AuthContext";
 import { RootStackParamList } from "../navigation/types";
-import { COLORS } from "../constants/config";
+import { COLORS, FONTS, RADIUS, SHADOW } from "../constants/config";
 import type { Item } from "../types";
 
 type FeedTab = "lost" | "found" | "mine";
+const TAB_ORDER: FeedTab[] = ["lost", "found", "mine"];
+const EASE = Easing.bezier(0.4, 0, 0.2, 1);
 
 export function FeedScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const wide = width >= 900;
   const { token, user } = useAuth();
   const [campusItems, setCampusItems] = useState<Item[]>([]);
   const [myItems, setMyItems] = useState<Item[]>([]);
@@ -37,7 +54,9 @@ export function FeedScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [query, setQuery] = useState("");
-  const [tab, setTab] = useState<FeedTab>("lost");
+  const [tab, setTab] = useState<FeedTab>("found");
+  const [segmentW, setSegmentW] = useState(0);
+  const pillX = useSharedValue(0);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -64,10 +83,25 @@ export function FeedScreen() {
     }, [load]),
   );
 
+  useEffect(() => {
+    if (!segmentW) return;
+    const idx = TAB_ORDER.indexOf(tab);
+    const cell = (segmentW - 8) / 3;
+    pillX.value = withTiming(4 + idx * cell, { duration: 220, easing: EASE });
+  }, [tab, segmentW, pillX]);
+
+  const pillStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: pillX.value }],
+    width: Math.max((segmentW - 8) / 3, 0),
+  }));
+
+  const onSegmentLayout = (e: LayoutChangeEvent) => {
+    setSegmentW(e.nativeEvent.layout.width);
+  };
+
   const sectionItems = useMemo(() => {
     if (tab === "mine") return myItems;
     const list = campusItems.filter((item) => item.item_type === tab);
-    // Active reports first; returned found history at the bottom.
     return [...list].sort((a, b) => {
       const ar = a.status === "recovered" ? 1 : 0;
       const br = b.status === "recovered" ? 1 : 0;
@@ -93,88 +127,122 @@ export function FeedScreen() {
     });
   }, [sectionItems, query]);
 
-  if (loading) return <LoadingOverlay label="Loading campus feed..." />;
+  if (loading) {
+    return (
+      <LoadingOverlay
+        label="Loading campus feed"
+        hint="Fetching the latest lost & found reports…"
+      />
+    );
+  }
   if (error) return <ErrorState error={error} onRetry={load} />;
 
-  const lostCount = campusItems.filter(
-    (i) => i.item_type === "lost" && i.status !== "recovered",
-  ).length;
-  const foundActive = campusItems.filter(
-    (i) => i.item_type === "found" && i.status !== "recovered",
-  ).length;
-  const foundReturned = campusItems.filter(
-    (i) => i.item_type === "found" && i.status === "recovered",
-  ).length;
+  const tabs: { key: FeedTab; label: string }[] = [
+    { key: "lost", label: "Lost" },
+    { key: "found", label: "Found" },
+    { key: "mine", label: "My items" },
+  ];
 
   return (
     <ConnectionGate>
       <View style={styles.root}>
+        <DaylightBackdrop />
         <ConnectionBanner />
-        <ScreenShell
-          title="Campus feed"
-          subtitle="After a real return, lost reports are removed. Successfully returned found items stay here so campus can trust the app."
+        <PageEnter
+          style={[
+            styles.header,
+            { paddingTop: Math.max(insets.top, 12) + 8 },
+            wide && styles.wideCol,
+          ]}
         >
-          <View style={styles.tabs}>
-            {(
-              [
-                { key: "lost" as const, label: `Lost (${lostCount})` },
-                {
-                  key: "found" as const,
-                  label:
-                    foundReturned > 0
-                      ? `Found (${foundActive}+${foundReturned})`
-                      : `Found (${foundActive})`,
-                },
-                { key: "mine" as const, label: `My items (${myItems.length})` },
-              ] as const
-            ).map((entry) => (
+          <View style={styles.headerTop}>
+            <View>
+              <Text style={styles.title}>Campus feed</Text>
+              <Text style={styles.subtitle}>Only valuables reported here</Text>
+            </View>
+            <View style={styles.headerActions}>
               <Pressable
-                key={entry.key}
-                style={[styles.tab, tab === entry.key && styles.tabActive]}
-                onPress={() => setTab(entry.key)}
-              >
-                <Text style={[styles.tabText, tab === entry.key && styles.tabTextActive]}>
-                  {entry.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-
-          {tab === "found" && foundReturned > 0 ? (
-            <Text style={styles.historyNote}>
-              Green RETURNED badges are success history — items already given back to owners.
-            </Text>
-          ) : null}
-          <TextInput
-            style={styles.search}
-            value={query}
-            onChangeText={setQuery}
-            placeholder={
-              tab === "mine" ? "Search your reports…" : `Search ${tab} items…`
-            }
-            placeholderTextColor={COLORS.textMuted}
-            autoCapitalize="none"
-            clearButtonMode="while-editing"
-          />
-          <FlatList
-            data={filtered}
-            keyExtractor={(item) => String(item.id)}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={() => {
+                style={styles.refreshBtn}
+                accessibilityLabel="Refresh feed"
+                onPress={() => {
                   setRefreshing(true);
                   load();
                 }}
-              />
-            }
-            renderItem={({ item }) => (
+              >
+                <Ionicons name="refresh" size={18} color={COLORS.primary} />
+              </Pressable>
+              <HomeButton />
+            </View>
+          </View>
+
+          <View style={styles.searchWrap}>
+            <Ionicons name="search" size={16} color={COLORS.textMuted} />
+            <TextInput
+              style={styles.search}
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Search phone, wallet, ID…"
+              placeholderTextColor={COLORS.textMuted}
+              autoCapitalize="none"
+              clearButtonMode="while-editing"
+            />
+            {query ? (
+              <Pressable
+                onPress={() => setQuery("")}
+                hitSlop={8}
+                style={styles.clearBtn}
+              >
+                <Ionicons name="close" size={14} color={COLORS.textMuted} />
+              </Pressable>
+            ) : null}
+          </View>
+
+          <View style={styles.segment} onLayout={onSegmentLayout}>
+            <Animated.View style={[styles.segmentPill, pillStyle]} />
+            {tabs.map((entry) => {
+              const active = tab === entry.key;
+              return (
+                <Pressable
+                  key={entry.key}
+                  style={styles.segmentItem}
+                  onPress={() => setTab(entry.key)}
+                >
+                  <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                    {entry.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </PageEnter>
+
+        <FlatList
+          data={filtered}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={[styles.list, wide && styles.wideCol]}
+          numColumns={wide ? 2 : 1}
+          key={wide ? "wide" : "narrow"}
+          columnWrapperStyle={wide ? styles.columnWrap : undefined}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => {
+                setRefreshing(true);
+                load();
+              }}
+              tintColor={COLORS.accent}
+            />
+          }
+          renderItem={({ item }) => (
+            <View style={wide ? styles.gridItem : undefined}>
               <ItemCard
                 item={item}
                 isMine={item.reporter_vtu_id === user?.vtu_id}
                 onPress={() => navigation.navigate("ItemDetail", { itemId: item.id })}
                 onRaiseLostClaim={
-                  tab === "found" &&
+                  item.item_type === "found" &&
                   item.reporter_vtu_id !== user?.vtu_id &&
                   item.status !== "recovered"
                     ? () =>
@@ -184,90 +252,166 @@ export function FeedScreen() {
                         })
                     : undefined
                 }
+                onAnswerLost={
+                  item.item_type === "lost" && item.reporter_vtu_id !== user?.vtu_id
+                    ? () =>
+                        navigation.navigate("Report", {
+                          mode: "found",
+                          linkLostId: item.id,
+                        })
+                    : undefined
+                }
               />
-            )}
-            ListEmptyComponent={
-              query.trim() ? (
-                <NoSearchResultsState
-                  query={query.trim()}
-                  onClear={() => setQuery("")}
-                  compact
-                />
-              ) : (
-                <EmptyState
-                  title={
-                    tab === "mine"
-                      ? "No reports from you yet"
-                      : tab === "lost"
-                        ? "No lost reports"
-                        : "No found reports"
-                  }
-                  message={
-                    tab === "mine"
-                      ? "Items you report appear here. After a real match they leave the public feed but stay here until recovered or reopened."
-                      : tab === "lost"
-                        ? "When someone reports a lost valuable, it shows in this section."
-                        : "When someone reports a found valuable, it shows in this section."
-                  }
-                  actionLabel="Report an item"
-                  onAction={() => navigation.navigate("Home")}
-                  compact
-                />
-              )
-            }
-          />
-        </ScreenShell>
+            </View>
+          )}
+          ListEmptyComponent={
+            query.trim() ? (
+              <NoSearchResultsState
+                query={query.trim()}
+                onClear={() => setQuery("")}
+                compact
+              />
+            ) : (
+              <EmptyState
+                title={
+                  tab === "mine"
+                    ? "You haven’t posted yet"
+                    : "Nothing here yet"
+                }
+                message={
+                  tab === "mine"
+                    ? "Items you report appear here until recovered or reopened."
+                    : tab === "lost"
+                      ? "When someone reports a lost valuable, it shows here."
+                      : "When someone reports a found valuable, it shows here."
+                }
+                actionLabel="Report an item"
+                onAction={() => navigation.navigate("Home")}
+                compact
+              />
+            )
+          }
+        />
       </View>
     </ConnectionGate>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1 },
-  tabs: {
-    flexDirection: "row",
-    gap: 6,
-    marginBottom: 12,
+  root: { flex: 1, backgroundColor: COLORS.background },
+  wideCol: {
+    width: "100%",
+    maxWidth: 768,
+    alignSelf: "center",
   },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    borderRadius: 10,
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  headerTop: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 14,
+  },
+  headerActions: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  title: {
+    fontFamily: FONTS.display,
+    fontSize: 26,
+    color: COLORS.text,
+    letterSpacing: -0.4,
+  },
+  subtitle: {
+    marginTop: 6,
+    fontFamily: FONTS.sans,
+    fontSize: 12,
+    color: COLORS.textMuted,
+  },
+  refreshBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
-    backgroundColor: COLORS.surface,
     alignItems: "center",
+    justifyContent: "center",
   },
-  tabActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  tabText: {
-    color: COLORS.text,
-    fontWeight: "700",
-    fontSize: 12,
-    textAlign: "center",
-  },
-  tabTextActive: {
-    color: "#fff",
-  },
-  historyNote: {
-    marginBottom: 10,
-    color: COLORS.success,
-    fontSize: 12,
-    lineHeight: 18,
-    fontWeight: "600",
+  searchWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS["2xl"],
+    paddingHorizontal: 14,
+    marginBottom: 16,
   },
   search: {
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    flex: 1,
+    paddingVertical: 14,
     fontSize: 15,
     color: COLORS.text,
-    marginBottom: 12,
+    fontFamily: FONTS.sansMedium,
+  },
+  clearBtn: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: COLORS.surfaceMuted,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  segment: {
+    flexDirection: "row",
+    backgroundColor: COLORS.surfaceMuted,
+    borderRadius: RADIUS["2xl"],
+    padding: 4,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    position: "relative",
+  },
+  segmentPill: {
+    position: "absolute",
+    top: 4,
+    bottom: 4,
+    left: 0,
+    borderRadius: 12,
+    backgroundColor: COLORS.card,
+    ...SHADOW.soft,
+  },
+  segmentItem: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: "center",
+    zIndex: 1,
+  },
+  segmentText: {
+    fontFamily: FONTS.sansMedium,
+    fontSize: 13,
+    color: COLORS.textMuted,
+  },
+  segmentTextActive: {
+    color: COLORS.text,
+    fontFamily: FONTS.sansSemi,
+  },
+  list: {
+    paddingHorizontal: 20,
+    paddingTop: 8,
+    paddingBottom: 24,
+    flexGrow: 1,
+  },
+  columnWrap: {
+    gap: 12,
+  },
+  gridItem: {
+    flex: 1,
   },
 });

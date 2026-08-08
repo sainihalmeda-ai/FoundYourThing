@@ -6,23 +6,20 @@ from app.services.embeddings import cosine_similarity
 
 
 def _combined_score(img_score: float, txt_score: float) -> float:
-    """Blend image + text, but trust near-identical photos.
+    """Honest blend of the visual and wording similarity.
 
-    Text embeddings are hash-based in the MVP, so different titles used to
-    drag a perfect image match down to ~83%. Strong visual matches now
-    dominate the displayed accuracy.
+    Nothing here inflates the result: the number a student reads has to drop
+    when the two photos show different objects. Negative correlations are
+    clamped so the percentage never goes below zero.
     """
-    blend = (
-        settings.match_image_weight * img_score
-        + settings.match_text_weight * txt_score
-    )
+    image = max(0.0, img_score)
+    text = max(0.0, txt_score)
 
-    if img_score >= 0.98:
-        # Same / near-same photo → report image confidence (~100%).
-        return max(blend, img_score)
-    if img_score >= 0.90:
-        return max(blend, 0.9 * img_score + 0.1 * txt_score)
-    return blend
+    if image >= 0.95:
+        # Effectively the same picture — wording cannot make that less certain.
+        return image
+
+    return settings.match_image_weight * image + settings.match_text_weight * text
 
 
 def find_matches_for_item(db: Session, item: Item) -> list[Match]:

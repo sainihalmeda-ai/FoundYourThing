@@ -8,14 +8,22 @@ from app.auth import create_access_token, get_current_user, hash_password, verif
 from app.database import get_db
 from app.models import User
 from app.schemas import TokenResponse, UserLogin, UserPublic, UserRegister
+from app.services.campus_id import (
+    CAMPUS_ID_ERROR,
+    is_campus_id,
+    normalize_campus_id,
+    role_for_campus_id,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 def register(payload: UserRegister, db: Session = Depends(get_db)):
+    if not is_campus_id(payload.vtu_id):
+        raise HTTPException(status_code=400, detail=CAMPUS_ID_ERROR)
     if db.query(User).filter(User.vtu_id == payload.vtu_id).first():
-        raise HTTPException(status_code=400, detail="This VTU ID is already registered.")
+        raise HTTPException(status_code=400, detail="This ID is already registered.")
     if db.query(User).filter(User.email == payload.email).first():
         raise HTTPException(status_code=400, detail="This email is already registered.")
 
@@ -26,6 +34,7 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
         email=payload.email,
         phone=payload.phone,
         password_hash=hash_password(payload.password),
+        role=role_for_campus_id(payload.vtu_id),
     )
     db.add(user)
     db.commit()
@@ -40,9 +49,11 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=TokenResponse)
 def login(payload: UserLogin, db: Session = Depends(get_db)):
+    if not is_campus_id(payload.vtu_id):
+        raise HTTPException(status_code=400, detail=CAMPUS_ID_ERROR)
     user = db.query(User).filter(User.vtu_id == payload.vtu_id).first()
     if not user or not verify_password(payload.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid VTU ID or password.")
+        raise HTTPException(status_code=401, detail="Invalid ID or password.")
 
     token = create_access_token(user.id)
     return TokenResponse(
@@ -53,9 +64,9 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
 
 @router.post("/token", response_model=TokenResponse, include_in_schema=False)
 def login_form(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.vtu_id == form.username.strip().upper()).first()
+    user = db.query(User).filter(User.vtu_id == normalize_campus_id(form.username)).first()
     if not user or not verify_password(form.password, user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid VTU ID or password.")
+        raise HTTPException(status_code=401, detail="Invalid ID or password.")
     token = create_access_token(user.id)
     return TokenResponse(
         access_token=token,

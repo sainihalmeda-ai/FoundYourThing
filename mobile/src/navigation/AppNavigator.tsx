@@ -4,7 +4,6 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { ClaimNoticeHost } from "../components/ClaimNoticeHost";
 import { LoadingOverlay } from "../components/LoadingOverlay";
-import { SessionBanner } from "../components/SessionBanner";
 import { SessionExpiringModal } from "../components/SessionExpiringModal";
 import { useAuth } from "../context/AuthContext";
 import { LoginScreen } from "../screens/LoginScreen";
@@ -12,6 +11,7 @@ import { RegisterScreen } from "../screens/RegisterScreen";
 import { AppStack } from "./AppStack";
 import { navigationRef } from "./navigationRef";
 import { RootStackParamList } from "./types";
+import { COLORS } from "../constants/config";
 
 const AuthStack = createNativeStackNavigator<RootStackParamList>();
 
@@ -19,13 +19,17 @@ export function AppNavigator() {
   const { token, loading } = useAuth();
 
   if (loading) {
-    return <LoadingOverlay label="Restoring session..." />;
+    return (
+      <LoadingOverlay
+        label="Restoring session"
+        hint="Checking your campus login…"
+      />
+    );
   }
 
   return (
     <NavigationContainer ref={navigationRef}>
-      <View style={{ flex: 1 }}>
-        {token ? <SessionBanner /> : null}
+      <View style={{ flex: 1, backgroundColor: COLORS.background }}>
         {token ? (
           <>
             <AppStack />
@@ -33,9 +37,18 @@ export function AppNavigator() {
             <SessionExpiringModal />
           </>
         ) : (
-          <AuthStack.Navigator>
+          <AuthStack.Navigator
+            screenOptions={{
+              headerStyle: { backgroundColor: COLORS.background },
+              headerShadowVisible: false,
+              headerTintColor: COLORS.primary,
+              contentStyle: { backgroundColor: COLORS.background },
+              animation: "fade",
+              animationDuration: 220,
+            }}
+          >
             <AuthStack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
-            <AuthStack.Screen name="Register" component={RegisterScreen} options={{ title: "Register" }} />
+            <AuthStack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
           </AuthStack.Navigator>
         )}
       </View>

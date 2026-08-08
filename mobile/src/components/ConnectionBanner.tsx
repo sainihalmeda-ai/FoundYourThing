@@ -1,42 +1,42 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useConnection } from "../context/ConnectionContext";
-import { COLORS } from "../constants/config";
+import { COLORS, FONTS, RADIUS } from "../constants/config";
 
 export function ConnectionBanner() {
-  const { state, message, refresh, dismissSlow } = useConnection();
+  const { state, refresh, dismissSlow } = useConnection();
 
   if (state === "online" || state === "checking") {
     return null;
   }
 
-  const background =
+  const message =
     state === "offline"
-      ? COLORS.offline
+      ? "You’re offline. Reports won’t upload until you’re back."
       : state === "server_down"
-        ? COLORS.danger
+        ? "Server unavailable. Start the backend, then retry."
         : state === "slow"
-          ? COLORS.warning
-          : COLORS.warning;
+          ? "Network is slow. Requests may take longer."
+          : "Connection issue.";
 
   const title =
     state === "offline"
-      ? "You are offline"
+      ? "No internet"
       : state === "server_down"
         ? "Server unavailable"
         : "Slow network";
 
   return (
-    <View style={[styles.banner, { backgroundColor: background }]}>
+    <View style={styles.banner}>
       <Text style={styles.title}>{title}</Text>
       <Text style={styles.message}>{message}</Text>
       <View style={styles.row}>
         <Pressable style={styles.button} onPress={refresh}>
-          <Text style={styles.buttonText}>Retry connection</Text>
+          <Text style={styles.buttonText}>Retry</Text>
         </Pressable>
         {state === "slow" ? (
           <Pressable style={styles.button} onPress={dismissSlow}>
-            <Text style={styles.buttonText}>Dismiss</Text>
+            <Text style={styles.buttonText}>Continue</Text>
           </Pressable>
         ) : null}
       </View>
@@ -46,35 +46,37 @@ export function ConnectionBanner() {
 
 const styles = StyleSheet.create({
   banner: {
+    backgroundColor: COLORS.primaryDark,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
   title: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 14,
+    color: COLORS.primaryForeground,
+    fontFamily: FONTS.sansBold,
+    fontSize: 13,
   },
   message: {
-    color: "#fff",
     marginTop: 4,
+    color: "rgba(251,248,241,0.85)",
+    fontFamily: FONTS.sans,
     fontSize: 12,
-    lineHeight: 18,
+    lineHeight: 17,
   },
   row: {
     flexDirection: "row",
     gap: 8,
-    marginTop: 8,
+    marginTop: 10,
   },
   button: {
     alignSelf: "flex-start",
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderRadius: RADIUS.pill,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingVertical: 7,
   },
   buttonText: {
-    color: "#fff",
-    fontWeight: "600",
+    color: COLORS.primaryForeground,
+    fontFamily: FONTS.sansSemi,
     fontSize: 12,
   },
 });

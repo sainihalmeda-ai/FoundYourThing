@@ -5,11 +5,11 @@ export type MainTabParamList = {
 };
 
 export type RootStackParamList = {
-  Login: undefined;
+  Login: { mode?: "login" | "register" } | undefined;
   Register: undefined;
   MainTabs: undefined;
   Home: undefined;
-  Report: { mode: "lost" | "found"; linkFoundId?: number };
+  Report: { mode: "lost" | "found"; linkFoundId?: number; linkLostId?: number };
   Feed: undefined;
   ItemDetail: { itemId: number };
   Claims: undefined;

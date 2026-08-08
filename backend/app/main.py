@@ -16,9 +16,14 @@ Base.metadata.create_all(bind=engine)
 # Recompute visual fingerprints + match % after embedding upgrades.
 try:
     with SessionLocal() as db:
-        refresh_embeddings_and_scores(db)
-except Exception:
-    pass
+        stats = refresh_embeddings_and_scores(db)
+    if any(stats.values()):
+        print(
+            f"[startup] re-fingerprinted {stats['items']} items, "
+            f"rescored {stats['matches']} matches, dropped {stats['dropped']} weak ones"
+        )
+except Exception as exc:  # never block boot on a bad photo file
+    print(f"[startup] embedding refresh skipped: {exc}")
 
 app = FastAPI(
     title="FoundYourThing API",

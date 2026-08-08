@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { COLORS } from "../../constants/config";
+import { COLORS, FONTS, RADIUS } from "../../constants/config";
 
 type Props = {
   message: string | null | undefined;
@@ -21,13 +21,13 @@ export function ValidationMessage({ message, field = false }: Props) {
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: "#FCE8E8",
-    borderRadius: 10,
+    backgroundColor: "rgba(238,52,59,0.1)",
+    borderRadius: RADIUS.lg,
     paddingHorizontal: 12,
     paddingVertical: 10,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: "#F5C2C2",
+    borderColor: "rgba(238,52,59,0.25)",
   },
   fieldWrap: {
     backgroundColor: "transparent",
@@ -41,6 +41,6 @@ const styles = StyleSheet.create({
     color: COLORS.danger,
     fontSize: 13,
     lineHeight: 18,
-    fontWeight: "500",
+    fontFamily: FONTS.sansMedium,
   },
 });

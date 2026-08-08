@@ -1,63 +1,87 @@
 import React from "react";
-import { Pressable, Text } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import {
+  BottomTabBar,
+  createBottomTabNavigator,
+  type BottomTabBarProps,
+} from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { HomeButton } from "../components/HomeButton";
 import { ClaimsScreen } from "../screens/ClaimsScreen";
 import { FeedScreen } from "../screens/FeedScreen";
 import { HomeScreen } from "../screens/HomeScreen";
 import { ItemDetailScreen } from "../screens/ItemDetailScreen";
 import { ReportScreen } from "../screens/ReportScreen";
-import { COLORS } from "../constants/config";
+import { COLORS, FONTS, RADIUS, SHADOW, TAB_BAR } from "../constants/config";
 import type { MainTabParamList, RootStackParamList } from "./types";
-import { navigate } from "./navigationRef";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-function TabLabel({ label, focused }: { label: string; focused: boolean }) {
+function TabIcon({
+  focused,
+  name,
+  nameOutline,
+}: {
+  focused: boolean;
+  name: keyof typeof Ionicons.glyphMap;
+  nameOutline: keyof typeof Ionicons.glyphMap;
+}) {
   return (
-    <Text
-      style={{
-        fontSize: 11,
-        fontWeight: focused ? "800" : "600",
-        color: focused ? COLORS.primary : COLORS.textMuted,
-        marginBottom: 2,
-      }}
-    >
-      {label}
-    </Text>
+    <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
+      <Ionicons
+        name={focused ? name : nameOutline}
+        size={18}
+        color={focused ? COLORS.primary : COLORS.textMuted}
+      />
+    </View>
   );
 }
 
-function HomeHeaderButton() {
+/**
+ * Floating pill nav that still occupies layout space (not position:absolute),
+ * so Home / Feed / Requests content never scrolls underneath it.
+ */
+function FloatingTabBar(props: BottomTabBarProps) {
+  const insets = useSafeAreaInsets();
   return (
-    <Pressable
-      onPress={() => navigate("MainTabs")}
-      style={{ marginRight: 12, padding: 6 }}
-      accessibilityLabel="Go to home"
+    <View
+      style={[
+        styles.tabBarDock,
+        { paddingBottom: Math.max(insets.bottom, TAB_BAR.bottomGap) },
+      ]}
     >
-      <Ionicons name="home" size={22} color={COLORS.primary} />
-    </Pressable>
+      <View style={styles.tabBarPill}>
+        <BottomTabBar
+          {...props}
+          style={styles.tabBarInner}
+        />
+      </View>
+    </View>
   );
 }
 
 function MainTabs() {
   return (
     <Tab.Navigator
+      tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{
         headerShown: true,
-        headerStyle: { backgroundColor: COLORS.surface },
-        headerTitleStyle: { fontWeight: "800", color: COLORS.text },
+        headerStyle: { backgroundColor: COLORS.background },
+        headerShadowVisible: false,
+        headerTitleStyle: {
+          fontFamily: FONTS.displayMedium,
+          fontSize: 18,
+          color: COLORS.text,
+        },
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textMuted,
-        tabBarStyle: {
-          backgroundColor: COLORS.surface,
-          borderTopColor: COLORS.border,
-          height: 62,
-          paddingTop: 4,
-          paddingBottom: 4,
-        },
+        tabBarStyle: { backgroundColor: "transparent", borderTopWidth: 0, elevation: 0 },
+        tabBarItemStyle: styles.tabItem,
+        tabBarLabelStyle: styles.tabLabel,
+        sceneStyle: { backgroundColor: COLORS.background },
       }}
     >
       <Tab.Screen
@@ -65,13 +89,10 @@ function MainTabs() {
         component={HomeScreen}
         options={{
           title: "FoundYourThing",
-          tabBarLabel: ({ focused }) => <TabLabel label="Home" focused={focused} />,
-          tabBarIcon: ({ focused, color, size }) => (
-            <Ionicons
-              name={focused ? "home" : "home-outline"}
-              size={size ?? 22}
-              color={color}
-            />
+          headerShown: false,
+          tabBarLabel: "Home",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon focused={focused} name="home" nameOutline="home-outline" />
           ),
         }}
       />
@@ -80,13 +101,10 @@ function MainTabs() {
         component={FeedScreen}
         options={{
           title: "Campus feed",
-          tabBarLabel: ({ focused }) => <TabLabel label="Browse" focused={focused} />,
-          tabBarIcon: ({ focused, color, size }) => (
-            <Ionicons
-              name={focused ? "search" : "search-outline"}
-              size={size ?? 22}
-              color={color}
-            />
+          headerShown: false,
+          tabBarLabel: "Browse",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon focused={focused} name="compass" nameOutline="compass-outline" />
           ),
         }}
       />
@@ -94,14 +112,11 @@ function MainTabs() {
         name="ClaimsTab"
         component={ClaimsScreen}
         options={{
-          title: "Requests",
-          tabBarLabel: ({ focused }) => <TabLabel label="Requests" focused={focused} />,
-          tabBarIcon: ({ focused, color, size }) => (
-            <Ionicons
-              name={focused ? "mail" : "mail-outline"}
-              size={size ?? 22}
-              color={color}
-            />
+          title: "Incoming requests",
+          headerShown: false,
+          tabBarLabel: "Requests",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon focused={focused} name="mail" nameOutline="mail-outline" />
           ),
         }}
       />
@@ -114,7 +129,17 @@ export function AppStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerRight: () => <HomeHeaderButton />,
+        headerStyle: { backgroundColor: COLORS.background },
+        headerShadowVisible: false,
+        headerTintColor: COLORS.primary,
+        headerTitleStyle: {
+          fontFamily: FONTS.displayMedium,
+          color: COLORS.text,
+        },
+        contentStyle: { backgroundColor: COLORS.background },
+        headerRight: () => <HomeButton />,
+        animation: Platform.OS === "ios" ? "slide_from_right" : "fade_from_bottom",
+        animationDuration: 220,
       }}
     >
       <Stack.Screen
@@ -130,3 +155,47 @@ export function AppStack() {
     </Stack.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBarDock: {
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  tabBarPill: {
+    height: TAB_BAR.height,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.98)",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: "hidden",
+    ...SHADOW.lift,
+  },
+  tabBarInner: {
+    backgroundColor: "transparent",
+    borderTopWidth: 0,
+    elevation: 0,
+    height: TAB_BAR.height,
+    paddingBottom: 8,
+    paddingTop: 8,
+  },
+  tabItem: {
+    borderRadius: RADIUS.xl,
+  },
+  tabLabel: {
+    fontFamily: FONTS.sansMedium,
+    fontSize: 11,
+    marginTop: 2,
+    letterSpacing: -0.2,
+  },
+  iconWrap: {
+    width: 36,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconWrapActive: {
+    backgroundColor: COLORS.surfaceMuted,
+  },
+});

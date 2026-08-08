@@ -11,8 +11,8 @@ type Props = {
 };
 
 export function SlowNetworkState({
-  title = "Slow network",
-  message = "Your connection is taking longer than usual. Requests may time out or feel delayed.",
+  title = "Connection is slow",
+  message = "Your network is taking longer than usual. Requests may time out or feel delayed.",
   onRetry,
   onContinue,
   compact,
@@ -22,19 +22,24 @@ export function SlowNetworkState({
     actions.push({ label: "Retry", onPress: onRetry });
   }
   if (onContinue) {
-    actions.push({ label: "Continue anyway", onPress: onContinue, variant: "secondary" });
+    actions.push({
+      label: "Continue anyway",
+      onPress: onContinue,
+      variant: "secondary",
+    });
   }
 
   return (
     <StateView
-      icon="…"
-      iconColor={COLORS.warning}
-      iconBg="#FFF4D6"
+      icon="hourglass-outline"
+      iconColor="#A9791B"
+      iconBg="rgba(235,189,87,0.22)"
       title={title}
       message={message}
       hint="Switch to a stronger Wi‑Fi network or move somewhere with better signal."
       actions={actions}
       compact={compact}
+      pulse
     />
   );
 }

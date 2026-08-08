@@ -1,4 +1,9 @@
-import { API_BASE_URL, MAX_RETRIES, REQUEST_TIMEOUT_MS } from "../constants/config";
+import {
+  API_BASE_URL,
+  HEALTH_TIMEOUT_MS,
+  MAX_RETRIES,
+  REQUEST_TIMEOUT_MS,
+} from "../constants/config";
 import { ApiError } from "../types";
 
 type RequestOptions = {
@@ -6,6 +11,8 @@ type RequestOptions = {
   token?: string | null;
   body?: Record<string, unknown> | FormData;
   retries?: number;
+  /** Override for slow calls such as photo uploads. */
+  timeoutMs?: number;
 };
 
 function sleep(ms: number) {
@@ -36,7 +43,13 @@ export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
-  const { method = "GET", token, body, retries = MAX_RETRIES } = options;
+  const {
+    method = "GET",
+    token,
+    body,
+    retries = MAX_RETRIES,
+    timeoutMs = REQUEST_TIMEOUT_MS,
+  } = options;
   const headers: Record<string, string> = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body && !(body instanceof FormData) && !(typeof FormData !== "undefined" && Object.prototype.toString.call(body) === "[object FormData]")) {
@@ -47,7 +60,7 @@ export async function apiRequest<T>(
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
       const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -109,10 +122,17 @@ export async function apiRequest<T>(
           "timeout",
         );
       } else {
+        // Android reports a broken multipart body the same way it reports a
+        // dead network, so keep the platform text for diagnosis.
+        const detail =
+          error instanceof Error ? `${error.name}: ${error.message}` : String(error);
         lastError = new ApiError(
           "Cannot reach the server. Make sure you are online and the backend is running.",
           "offline",
+          undefined,
+          detail,
         );
+        if (__DEV__) console.warn(`[api] ${method} ${path} failed — ${detail}`);
       }
 
       if (attempt < retries) {
@@ -125,15 +145,28 @@ export async function apiRequest<T>(
   throw lastError ?? new ApiError("Unknown error.", "unknown");
 }
 
-export async function checkServerHealth(): Promise<boolean> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/health`, {
-      method: "GET",
-    });
-    return response.ok;
-  } catch {
-    return false;
+/**
+ * One dropped request should not black out the whole app, so a couple of quick
+ * attempts must fail before we declare the server unreachable.
+ */
+export async function checkServerHealth(attempts = 2): Promise<boolean> {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/health`, {
+        method: "GET",
+        signal: controller.signal,
+      });
+      if (response.ok) return true;
+    } catch {
+      // Fall through to the next attempt.
+    } finally {
+      clearTimeout(timeout);
+    }
+    if (attempt < attempts - 1) await sleep(700);
   }
+  return false;
 }
 
 export function resolveImageUrl(path: string): string {

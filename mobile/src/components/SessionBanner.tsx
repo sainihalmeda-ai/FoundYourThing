@@ -1,98 +1,59 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "../context/AuthContext";
-import { COLORS, SESSION_DURATION_MS, SESSION_WARN_MS } from "../constants/config";
+import { COLORS, FONTS, RADIUS, SESSION_WARN_MS } from "../constants/config";
 
 function formatRemaining(ms: number): string {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
 }
 
-/** Top-of-screen countdown for the 10-minute login session. */
+/** Compact secure-session pill (Campus Connect style). */
 export function SessionBanner() {
   const { token, remainingMs, isExpiringSoon } = useAuth();
 
   if (!token) return null;
 
-  const progress = Math.min(1, remainingMs / SESSION_DURATION_MS);
   const urgent = isExpiringSoon || remainingMs <= SESSION_WARN_MS;
 
   return (
-    <View style={[styles.banner, urgent && styles.bannerUrgent]}>
-      <View style={styles.row}>
-        <Text style={styles.label}>Session</Text>
-        <Text style={[styles.time, urgent && styles.timeUrgent]}>
-          {formatRemaining(remainingMs)} left
-        </Text>
-      </View>
-      <View style={styles.track}>
-        <View
-          style={[
-            styles.fill,
-            { width: `${Math.max(2, progress * 100)}%` },
-            urgent && styles.fillUrgent,
-          ]}
-        />
-      </View>
-      <Text style={styles.hint}>
-        {urgent
-          ? "Session ending soon — choose Continue to stay signed in."
-          : "Your session lasts 10 minutes. You’ll get a reminder before it ends."}
+    <View style={[styles.pill, urgent && styles.pillUrgent]}>
+      <Ionicons
+        name={urgent ? "time-outline" : "shield-checkmark"}
+        size={14}
+        color={urgent ? COLORS.danger : COLORS.accent}
+      />
+      <Text style={[styles.text, urgent && styles.textUrgent]}>
+        Secure · {formatRemaining(remainingMs)}
       </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  banner: {
-    backgroundColor: COLORS.primaryDark,
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 12,
-  },
-  bannerUrgent: {
-    backgroundColor: "#8A4B08",
-  },
-  row: {
+  pill: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    gap: 6,
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.pill,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  label: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 13,
+  pillUrgent: {
+    borderColor: "rgba(239,68,68,0.25)",
   },
-  time: {
-    color: "#fff",
-    fontWeight: "800",
-    fontSize: 16,
-    fontVariant: ["tabular-nums"],
-  },
-  timeUrgent: {
-    color: "#FFE8A3",
-  },
-  track: {
-    marginTop: 8,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.25)",
-    overflow: "hidden",
-  },
-  fill: {
-    height: "100%",
-    borderRadius: 999,
-    backgroundColor: COLORS.accent,
-  },
-  fillUrgent: {
-    backgroundColor: COLORS.warning,
-  },
-  hint: {
-    marginTop: 8,
-    color: "rgba(255,255,255,0.85)",
+  text: {
+    fontFamily: FONTS.sansMedium,
     fontSize: 11,
-    lineHeight: 16,
+    color: COLORS.textMuted,
+  },
+  textUrgent: {
+    color: COLORS.danger,
   },
 });

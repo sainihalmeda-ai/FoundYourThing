@@ -63,9 +63,17 @@ Same as above, matching runs against open **lost** items.
 ## AI matching (MVP)
 
 ```
-combined_score = 0.6 × image_similarity + 0.4 × text_similarity
+combined_score = 0.85 × image_similarity + 0.15 × text_similarity
 ```
 
-Threshold default: `0.55` (configurable in backend `.env`).
+Image similarity is the correlation between three mean-centred blocks — a 16×16
+grey thumbnail, a 4×4 grid of edge-orientation histograms, and an RGB histogram.
+Mean-centring matters: raw pixel vectors are all-positive, so plain cosine rated
+two unrelated photos at 90%+. Text similarity uses signed token hashing for the
+same reason. Unrelated reports now land near 0, identical photos at 1.0.
+
+Threshold default: `0.55` (configurable in backend `.env`). Scores are shown to
+students with a plain-English confidence word, never as a verdict — the two
+people still compare the photos themselves.
 
 Upgrade path: replace `services/embeddings.py` with CLIP + MiniLM without changing API contracts.

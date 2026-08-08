@@ -6,9 +6,15 @@ from sqlalchemy.orm import Session
 from app.auth import get_current_user
 from app.database import get_db
 from app.models import ClaimRequest, ClaimStatus, Item, ItemStatus, ItemType, Match, User
-from app.schemas import ClaimAgainstFound, ClaimCreate, ClaimPublic, ClaimRespond
+from app.schemas import (
+    ClaimAgainstFound,
+    ClaimCreate,
+    ClaimPublic,
+    ClaimRespond,
+    FoundAgainstLost,
+)
 from app.services.embeddings import cosine_similarity
-from app.services.matching import find_matches_for_item
+from app.services.matching import _combined_score, find_matches_for_item
 from app.services.privacy import disclosure_for_match, serialize_item, user_public
 
 router = APIRouter(prefix="/claims", tags=["claims"])
@@ -39,6 +45,42 @@ def _serialize_claim(claim: ClaimRequest, viewer: User) -> dict:
             "claim_status": claim.status.value,
         },
     }
+
+
+def _match_for_pair(db: Session, lost_item: Item, found_item: Item) -> Match:
+    """Reuse the AI match for this pair, or create one for a user-asserted link."""
+    match = (
+        db.query(Match)
+        .filter(
+            Match.lost_item_id == lost_item.id,
+            Match.found_item_id == found_item.id,
+        )
+        .first()
+    )
+    if not match:
+        img_score = cosine_similarity(lost_item.image_embedding, found_item.image_embedding)
+        txt_score = cosine_similarity(lost_item.text_embedding, found_item.text_embedding)
+        # A student asserting the link does not make the photos alike, so the
+        # score stays honest — the two people compare the pictures themselves.
+        combined = _combined_score(img_score, txt_score)
+        match = Match(
+            lost_item_id=lost_item.id,
+            found_item_id=found_item.id,
+            image_score=img_score,
+            text_score=txt_score,
+            combined_score=combined,
+        )
+        db.add(match)
+        db.flush()
+
+    if match.claim:
+        if match.claim.status in {ClaimStatus.CANCELLED, ClaimStatus.REJECTED}:
+            db.delete(match.claim)
+            db.flush()
+        else:
+            raise HTTPException(status_code=400, detail="A claim already exists for this pair.")
+
+    return match
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -101,35 +143,7 @@ def claim_against_found(
             detail="This found item is not available to claim right now.",
         )
 
-    match = (
-        db.query(Match)
-        .filter(
-            Match.lost_item_id == lost_item.id,
-            Match.found_item_id == found_item.id,
-        )
-        .first()
-    )
-    if not match:
-        img_score = cosine_similarity(lost_item.image_embedding, found_item.image_embedding)
-        txt_score = cosine_similarity(lost_item.text_embedding, found_item.text_embedding)
-        # User-asserted browse claim — keep a strong combined score for visibility.
-        combined = max(0.75, 0.85 * img_score + 0.15 * txt_score)
-        match = Match(
-            lost_item_id=lost_item.id,
-            found_item_id=found_item.id,
-            image_score=img_score,
-            text_score=txt_score,
-            combined_score=combined,
-        )
-        db.add(match)
-        db.flush()
-
-    if match.claim:
-        if match.claim.status in {ClaimStatus.CANCELLED, ClaimStatus.REJECTED}:
-            db.delete(match.claim)
-            db.flush()
-        else:
-            raise HTTPException(status_code=400, detail="A claim already exists for this pair.")
+    match = _match_for_pair(db, lost_item, found_item)
 
     claim = ClaimRequest(
         match_id=match.id,
@@ -138,6 +152,53 @@ def claim_against_found(
         message=(
             payload.message.strip()
             or "I saw this on the campus found feed and believe it is mine."
+        ),
+    )
+    lost_item.status = ItemStatus.CLAIM_PENDING
+    found_item.status = ItemStatus.CLAIM_PENDING
+    db.add(claim)
+    db.commit()
+    db.refresh(claim)
+    return _serialize_claim(claim, current_user)
+
+
+@router.post("/against-lost", status_code=status.HTTP_201_CREATED)
+def found_against_lost(
+    payload: FoundAgainstLost,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Answer a lost report with a found report (browse → "I found this").
+
+    The finder starts the conversation here, so the owner of the lost report is
+    the one who accepts and releases contact details.
+    """
+    lost_item = db.get(Item, payload.lost_item_id)
+    found_item = db.get(Item, payload.found_item_id)
+    if not lost_item or not found_item:
+        raise HTTPException(status_code=404, detail="Item not found.")
+    if lost_item.item_type != ItemType.LOST or found_item.item_type != ItemType.FOUND:
+        raise HTTPException(status_code=400, detail="Need one lost report and one found report.")
+    if found_item.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Only you can answer with your found report.")
+    if lost_item.user_id == current_user.id:
+        raise HTTPException(status_code=400, detail="You cannot answer your own lost report.")
+    if lost_item.status not in {ItemStatus.OPEN, ItemStatus.MATCHED}:
+        raise HTTPException(
+            status_code=400,
+            detail="This lost report is not open for a found match right now.",
+        )
+
+    match = _match_for_pair(db, lost_item, found_item)
+
+    # Roles are flipped versus a normal claim: the finder asks, the owner answers.
+    claim = ClaimRequest(
+        match_id=match.id,
+        claimer_id=current_user.id,
+        finder_id=lost_item.user_id,
+        message=(
+            payload.message.strip()
+            or "I saw your lost report on the campus feed and I think I found this item."
         ),
     )
     lost_item.status = ItemStatus.CLAIM_PENDING

@@ -11,6 +11,7 @@ from app.database import get_db
 from app.models import ClaimRequest, ClaimStatus, Item, ItemStatus, ItemType, Match, User
 from app.services.embeddings import image_embedding_from_bytes, text_embedding_from_string
 from app.services.matching import find_matches_for_item, get_matches_for_item
+from app.services.photo_verify import verify_live_capture
 from app.services.privacy import serialize_item
 from app.schemas import ItemPublic
 
@@ -133,6 +134,8 @@ async def create_item(
     description: str = Form(""),
     location: str = Form(...),
     is_urgent: bool = Form(False),
+    client_exif: str = Form(""),
+    client_now: str = Form(""),
     image: UploadFile = File(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -150,6 +153,19 @@ async def create_item(
     content = await image.read()
     if len(content) > 5 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Image must be under 5 MB.")
+
+    # LiveGo: finders must show the item in front of them, so the photo itself has
+    # to look like a fresh camera frame. Owners of lost items have nothing to
+    # photograph, so they are never checked.
+    if settings.livego_enabled and item_type == "found":
+        check = verify_live_capture(
+            content,
+            client_exif=client_exif,
+            client_now=client_now,
+            max_age_minutes=settings.live_photo_max_age_minutes,
+        )
+        if not check.ok:
+            raise HTTPException(status_code=400, detail=check.reason)
 
     ext = Path(image.filename or "photo.jpg").suffix.lower() or ".jpg"
     filename = f"{uuid.uuid4().hex}{ext}"

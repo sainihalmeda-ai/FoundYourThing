@@ -13,22 +13,30 @@ type Props = {
   compact?: boolean;
 };
 
+function getTitle(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.kind === "server") return "Server hiccup";
+    if (error.kind === "validation") return "Check those details";
+  }
+  return "Something went wrong";
+}
+
 function getMessage(error: unknown): string {
   if (error instanceof ApiError) return error.message;
   if (error instanceof Error) return error.message;
-  return "Something went wrong.";
+  return "We couldn’t finish that. Give it another try in a moment.";
 }
 
 function getHint(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.kind === "server") {
-      return "Backend error — verify Python server logs.";
+      return "The campus backend replied with an error. Retry once, then check the server if it persists.";
     }
     if (error.kind === "validation") {
-      return "Check the details you entered and try again.";
+      return "Fix the highlighted fields and submit again.";
     }
   }
-  return "If this keeps happening, restart the app and backend.";
+  return "A quick retry usually clears this. If not, reload the app.";
 }
 
 export function ErrorState({ error, onRetry, onSignIn, compact }: Props) {
@@ -46,15 +54,15 @@ export function ErrorState({ error, onRetry, onSignIn, compact }: Props) {
 
   const actions: StateAction[] = [];
   if (onRetry) {
-    actions.push({ label: "Retry", onPress: onRetry });
+    actions.push({ label: "Try again", onPress: onRetry });
   }
 
   return (
     <StateView
-      icon="!"
+      icon="alert-circle-outline"
       iconColor={COLORS.danger}
-      iconBg="#FCE8E8"
-      title="Could not complete request"
+      iconBg="rgba(238,52,59,0.12)"
+      title={getTitle(error)}
       message={getMessage(error)}
       hint={getHint(error)}
       actions={actions}

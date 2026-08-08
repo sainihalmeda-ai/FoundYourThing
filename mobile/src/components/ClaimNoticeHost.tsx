@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from "react";
 import {
-  Image,
   Modal,
   Pressable,
   StyleSheet,
@@ -17,7 +16,8 @@ import {
   getDismissedIncomingClaimIds,
 } from "../lib/acceptedClaimNotices";
 import { navigate } from "../navigation/navigationRef";
-import { COLORS } from "../constants/config";
+import { PhotoView } from "./PhotoView";
+import { COLORS, FONTS, RADIUS, SHADOW } from "../constants/config";
 import type { Claim } from "../types";
 
 type Notice =
@@ -30,7 +30,7 @@ type Notice =
  * - Claimant: finder accepted (with item photos)
  */
 export function ClaimNoticeHost() {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [notice, setNotice] = useState<Notice | null>(null);
 
   const refresh = useCallback(async () => {
@@ -53,7 +53,11 @@ export function ClaimNoticeHost() {
       }
 
       const acceptedHit = mine.find(
-        (c) => c.status === "accepted" && !dismissedAccepted.includes(c.id),
+        (c) =>
+          c.status === "accepted" &&
+          !dismissedAccepted.includes(c.id) &&
+          c.match.lost_item.status !== "closed" &&
+          c.match.found_item.status !== "recovered",
       );
       if (acceptedHit) {
         setNotice({ kind: "accepted", claim: acceptedHit });
@@ -78,12 +82,12 @@ export function ClaimNoticeHost() {
   const claim = notice.claim;
   const lost = claim.match.lost_item;
   const found = claim.match.found_item;
-  const photoUrl = resolveImageUrl(
-    notice.kind === "incoming" ? lost.image_url : found.image_url,
-  );
-  const secondaryPhoto = resolveImageUrl(
-    notice.kind === "incoming" ? found.image_url : lost.image_url,
-  );
+  // Either side can start the conversation, so work out which report is yours.
+  const iOwnLost = lost.reporter_vtu_id === user?.vtu_id;
+  const yours = iOwnLost ? lost : found;
+  const theirs = iOwnLost ? found : lost;
+  const photoUrl = resolveImageUrl(theirs.image_url);
+  const secondaryPhoto = resolveImageUrl(yours.image_url);
 
   const dismiss = async () => {
     if (notice.kind === "incoming") {
@@ -92,12 +96,11 @@ export function ClaimNoticeHost() {
       await dismissAcceptedClaim(claim.id);
     }
     setNotice(null);
-    // Pick up the next notice if any.
     setTimeout(refresh, 300);
   };
 
   const open = async () => {
-    const itemId = notice.kind === "incoming" ? found.id : lost.id;
+    const itemId = yours.id;
     const kind = notice.kind;
     await dismiss();
     if (kind === "incoming") {
@@ -107,42 +110,49 @@ export function ClaimNoticeHost() {
     }
   };
 
+  const showPhone =
+    notice.kind === "accepted" &&
+    Boolean(claim.counterparty.phone) &&
+    lost.status !== "closed" &&
+    found.status !== "recovered";
+
   return (
     <Modal visible transparent animationType="fade" statusBarTranslucent>
       <View style={styles.backdrop}>
         <View style={styles.card}>
+          <Text style={styles.eyebrow}>
+            {notice.kind === "incoming" ? "New request" : "Contact unlocked"}
+          </Text>
           <Text style={styles.title}>
             {notice.kind === "incoming" ? "New claim request" : "Claim accepted"}
           </Text>
           <Text style={styles.message}>
             {notice.kind === "incoming"
-              ? `${claim.counterparty.vtu_id} thinks your found item matches their lost report. Compare the photos below.`
-              : `The finder accepted your request for “${lost.title}”. Contact is unlocked.`}
+              ? iOwnLost
+                ? `${claim.counterparty.vtu_id} thinks they found your lost item. Compare the photos below.`
+                : `${claim.counterparty.vtu_id} thinks your found item matches their lost report. Compare the photos below.`
+              : `Your request about “${theirs.title}” was accepted. Meet on campus.`}
           </Text>
 
           <View style={styles.photos}>
             <View style={styles.photoWrap}>
-              <Image source={{ uri: photoUrl }} style={styles.photo} />
-              <Text style={styles.photoLabel}>
-                {notice.kind === "incoming" ? "Their lost item" : "Finder's item"}
-              </Text>
+              <PhotoView uri={photoUrl} style={styles.photo} />
+              <Text style={styles.photoLabel}>Their photo</Text>
             </View>
             <View style={styles.photoWrap}>
-              <Image source={{ uri: secondaryPhoto }} style={styles.photo} />
-              <Text style={styles.photoLabel}>
-                {notice.kind === "incoming" ? "Your found item" : "Your lost item"}
-              </Text>
+              <PhotoView uri={secondaryPhoto} style={styles.photo} />
+              <Text style={styles.photoLabel}>Your photo</Text>
             </View>
           </View>
 
           <Text style={styles.meta}>
             {lost.title} ↔ {found.title}
           </Text>
-          {notice.kind === "accepted" &&
-          claim.counterparty.phone &&
-          claim.match.lost_item.status !== "closed" &&
-          claim.match.found_item.status !== "recovered" ? (
-            <Text style={styles.phone}>Phone: {claim.counterparty.phone}</Text>
+          {showPhone ? (
+            <View style={styles.phoneBox}>
+              <Text style={styles.phoneLabel}>Phone</Text>
+              <Text style={styles.phone}>{claim.counterparty.phone}</Text>
+            </View>
           ) : null}
 
           <Pressable style={styles.primary} onPress={open}>
@@ -162,91 +172,105 @@ export function ClaimNoticeHost() {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(16, 42, 67, 0.55)",
+    backgroundColor: "rgba(15,27,45,0.55)",
     justifyContent: "center",
     alignItems: "center",
-    padding: 24,
+    padding: 20,
   },
   card: {
     width: "100%",
-    maxWidth: 380,
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS["3xl"],
+    padding: 22,
+    ...SHADOW.lift,
+  },
+  eyebrow: {
+    fontFamily: FONTS.sansBold,
+    fontSize: 11,
+    color: COLORS.accent,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    textAlign: "center",
   },
   title: {
-    fontSize: 20,
-    fontWeight: "800",
+    marginTop: 6,
+    fontFamily: FONTS.display,
+    fontSize: 26,
     color: COLORS.text,
     textAlign: "center",
-    marginBottom: 8,
   },
   message: {
+    marginTop: 8,
+    fontFamily: FONTS.sans,
     fontSize: 14,
     color: COLORS.textMuted,
-    lineHeight: 21,
     textAlign: "center",
+    lineHeight: 20,
   },
   photos: {
     flexDirection: "row",
     gap: 10,
     marginTop: 16,
   },
-  photoWrap: {
-    flex: 1,
-  },
+  photoWrap: { flex: 1 },
   photo: {
     width: "100%",
-    height: 110,
-    borderRadius: 12,
-    backgroundColor: "#EEF2F7",
+    height: 130,
+    borderRadius: RADIUS.xl,
   },
   photoLabel: {
     marginTop: 6,
+    fontFamily: FONTS.sansBold,
     fontSize: 11,
-    fontWeight: "700",
     color: COLORS.textMuted,
     textAlign: "center",
   },
   meta: {
     marginTop: 12,
     textAlign: "center",
+    fontFamily: FONTS.sansSemi,
     color: COLORS.text,
-    fontWeight: "600",
     fontSize: 13,
   },
+  phoneBox: {
+    marginTop: 12,
+    backgroundColor: "rgba(0,156,165,0.1)",
+    borderRadius: RADIUS.xl,
+    padding: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(0,156,165,0.22)",
+  },
+  phoneLabel: {
+    fontFamily: FONTS.sansSemi,
+    fontSize: 11,
+    color: COLORS.accent,
+  },
   phone: {
-    marginTop: 8,
-    textAlign: "center",
-    color: COLORS.success,
-    fontWeight: "800",
-    fontSize: 15,
+    marginTop: 2,
+    fontFamily: FONTS.sansBold,
+    fontSize: 18,
+    color: COLORS.text,
+    letterSpacing: 0.5,
   },
   primary: {
     marginTop: 16,
     backgroundColor: COLORS.primary,
-    paddingVertical: 13,
-    borderRadius: 12,
+    borderRadius: RADIUS["2xl"],
+    paddingVertical: 14,
     alignItems: "center",
   },
   primaryText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 15,
+    color: COLORS.primaryForeground,
+    fontFamily: FONTS.sansBold,
   },
   secondary: {
-    marginTop: 10,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    paddingVertical: 13,
-    borderRadius: 12,
+    marginTop: 8,
+    paddingVertical: 12,
     alignItems: "center",
   },
   secondaryText: {
-    color: COLORS.primary,
-    fontWeight: "700",
-    fontSize: 15,
+    fontFamily: FONTS.sansSemi,
+    color: COLORS.textMuted,
   },
 });

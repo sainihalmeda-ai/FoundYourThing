@@ -37,6 +37,11 @@ class ClaimStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
+def _enum_values(enum_cls: type[enum.Enum]) -> list[str]:
+    """Store enum *values* in Postgres, not member names like LOST/OPEN."""
+    return [member.value for member in enum_cls]
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -65,7 +70,9 @@ class Item(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
-    item_type: Mapped[ItemType] = mapped_column(Enum(ItemType))
+    item_type: Mapped[ItemType] = mapped_column(
+        Enum(ItemType, values_callable=_enum_values, name="itemtype")
+    )
     category: Mapped[str] = mapped_column(String(40), index=True)
     title: Mapped[str] = mapped_column(String(120))
     description: Mapped[str] = mapped_column(Text, default="")
@@ -73,7 +80,10 @@ class Item(Base):
     image_path: Mapped[str] = mapped_column(String(255))
     image_embedding: Mapped[list | None] = mapped_column(JSON, nullable=True)
     text_embedding: Mapped[list | None] = mapped_column(JSON, nullable=True)
-    status: Mapped[ItemStatus] = mapped_column(Enum(ItemStatus), default=ItemStatus.OPEN)
+    status: Mapped[ItemStatus] = mapped_column(
+        Enum(ItemStatus, values_callable=_enum_values, name="itemstatus"),
+        default=ItemStatus.OPEN,
+    )
     is_urgent: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
@@ -116,7 +126,10 @@ class ClaimRequest(Base):
     match_id: Mapped[int] = mapped_column(ForeignKey("matches.id"), unique=True)
     claimer_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     finder_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
-    status: Mapped[ClaimStatus] = mapped_column(Enum(ClaimStatus), default=ClaimStatus.PENDING)
+    status: Mapped[ClaimStatus] = mapped_column(
+        Enum(ClaimStatus, values_callable=_enum_values, name="claimstatus"),
+        default=ClaimStatus.PENDING,
+    )
     message: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     responded_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

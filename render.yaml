@@ -1,0 +1,32 @@
+# Render Blueprint — FoundYourThing API
+# Dashboard: https://dashboard.render.com
+#
+# Free web services have no persistent disks (uploads reset on redeploy).
+# After creating the service on a paid plan, attach a disk mounted at /var/data
+# and set UPLOAD_DIR=/var/data/uploads.
+
+services:
+  - type: web
+    name: foundyourthing-api
+    runtime: python
+    plan: free
+    region: singapore
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: UPLOAD_DIR
+        value: ./uploads
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "10"
+      - key: LIVEGO_ENABLED
+        value: "false"

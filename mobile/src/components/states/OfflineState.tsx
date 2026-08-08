@@ -10,8 +10,8 @@ type Props = {
 };
 
 export function OfflineState({
-  title = "No internet",
-  message = "You’re offline. Check Wi‑Fi or mobile data, then try again. Reports won’t upload until you’re back online.",
+  title = "You’re offline",
+  message = "No connection to the campus server. Check Wi‑Fi or mobile data — reports won’t upload until you’re back online.",
   onRetry,
   compact,
 }: Props) {
@@ -22,14 +22,15 @@ export function OfflineState({
 
   return (
     <StateView
-      icon="⌀"
-      iconColor="#fff"
+      icon="cloud-offline-outline"
+      iconColor={COLORS.primaryForeground}
       iconBg={COLORS.offline}
       title={title}
       message={message}
-      hint="Airplane mode, weak signal, or captive Wi‑Fi portals are common causes."
+      hint="Airplane mode, weak signal, or a captive Wi‑Fi login page are the usual culprits."
       actions={actions}
       compact={compact}
+      pulse
     />
   );
 }

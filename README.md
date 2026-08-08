@@ -81,6 +81,19 @@ Phone numbers are **never** auto-shared.
 
 ---
 
+## Who can register
+
+Only college identity numbers are accepted, and the prefix decides the role:
+
+| Prefix | Who | Role stored |
+|--------|-----|-------------|
+| `VTU` | Students | `student` |
+| `TTS` | Staff | `staff` |
+
+Any other ID is refused at registration and at login. The rule lives in
+`backend/app/services/campus_id.py` and is mirrored on the client in
+`mobile/src/lib/validation.ts` — change both together.
+
 ## Project Structure
 
 ```

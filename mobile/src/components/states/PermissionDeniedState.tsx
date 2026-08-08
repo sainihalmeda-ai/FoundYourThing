@@ -33,9 +33,9 @@ export function PermissionDeniedState({
 
   return (
     <StateView
-      icon="✕"
+      icon="shield-outline"
       iconColor={COLORS.danger}
-      iconBg="#FCE8E8"
+      iconBg="rgba(238,52,59,0.12)"
       title={title}
       message={
         message ??

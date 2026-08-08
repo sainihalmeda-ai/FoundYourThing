@@ -1,19 +1,68 @@
+import "react-native-reanimated";
 import { StatusBar } from "expo-status-bar";
 import React from "react";
+import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import {
+  useFonts,
+  Fraunces_400Regular,
+  Fraunces_600SemiBold,
+  Fraunces_700Bold,
+} from "@expo-google-fonts/fraunces";
+import {
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
+} from "@expo-google-fonts/manrope";
 import { AuthProvider } from "./src/context/AuthContext";
 import { ConnectionProvider } from "./src/context/ConnectionContext";
+import { KeyboardProvider } from "./src/components/Keyboard";
 import { AppNavigator } from "./src/navigation/AppNavigator";
+import { COLORS } from "./src/constants/config";
 
 export default function App() {
+  const [fontsLoaded] = useFonts({
+    Fraunces_400Regular,
+    Fraunces_600SemiBold,
+    Fraunces_700Bold,
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
+  });
+  const [fontsTimedOut, setFontsTimedOut] = React.useState(false);
+
+  React.useEffect(() => {
+    const id = setTimeout(() => setFontsTimedOut(true), 4000);
+    return () => clearTimeout(id);
+  }, []);
+
+  if (!fontsLoaded && !fontsTimedOut) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: COLORS.background,
+        }}
+      >
+        <ActivityIndicator color={COLORS.accent} size="large" />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaProvider>
-      <ConnectionProvider>
-        <AuthProvider>
-          <AppNavigator />
-          <StatusBar style="dark" />
-        </AuthProvider>
-      </ConnectionProvider>
+      <KeyboardProvider>
+        <ConnectionProvider>
+          <AuthProvider>
+            <AppNavigator />
+            <StatusBar style="dark" />
+          </AuthProvider>
+        </ConnectionProvider>
+      </KeyboardProvider>
     </SafeAreaProvider>
   );
 }

@@ -1,4 +1,5 @@
 import { apiRequest } from "../api/client";
+import { UPLOAD_TIMEOUT_MS } from "../constants/config";
 import { clearToken, getToken, saveToken } from "../lib/tokenStorage";
 import type { Claim, Item, MatchResult, User } from "../types";
 
@@ -64,7 +65,10 @@ export async function createItem(token: string, form: FormData) {
     method: "POST",
     token,
     body: form,
+    // Never retry: a repeat of a request that actually landed posts the item twice.
     retries: 0,
+    // A photo upload on campus Wi-Fi needs far longer than a JSON call.
+    timeoutMs: UPLOAD_TIMEOUT_MS,
   });
 }
 
@@ -93,6 +97,25 @@ export async function claimAgainstFound(
       found_item_id: foundItemId,
       lost_item_id: lostItemId,
       message: message ?? "I saw this on the campus found feed and believe it is mine.",
+    },
+  });
+}
+
+export async function foundAgainstLost(
+  token: string,
+  lostItemId: number,
+  foundItemId: number,
+  message?: string,
+) {
+  return apiRequest<Claim>("/api/claims/against-lost", {
+    method: "POST",
+    token,
+    body: {
+      lost_item_id: lostItemId,
+      found_item_id: foundItemId,
+      message:
+        message ??
+        "I saw your lost report on the campus feed and I think I found this item.",
     },
   });
 }
