@@ -127,10 +127,10 @@ const resolvedApiBaseUrl =
 export const API_BASE_URL = resolvedApiBaseUrl;
 
 /** Expo preview APK install page — share the web /download link, not this raw URL. */
-/** FYT 1.0.2 — black-screen fix build (direct Expo artifact). */
+/** FYT 1.0.3 — WebView shell loading the live Render web app. */
 export const APK_DOWNLOAD_URL =
   process.env.EXPO_PUBLIC_APK_URL ??
-  "https://expo.dev/artifacts/eas/QcC0hwuRBifLJlvWCUNq7KfEFFXd2B6eeByCk5GYuOg.apk";
+  "https://expo.dev/artifacts/eas/m0mO28OZt6enOiSVLaBesWoIRVFKbnr658XRQSrXFRc.apk";
 
 /** Public download page on the hosted web app. */
 export const FYT_APK_PAGE_URL =
