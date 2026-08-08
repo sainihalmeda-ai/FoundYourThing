@@ -8,8 +8,67 @@ const CAMPUS_ID = /^(VTU|TTS)[A-Z0-9]{3,17}$/;
 const CAMPUS_ID_ERROR =
   "Use your college ID: VTU number for students, TTS number for staff.";
 
+const PERSONAL_DOMAINS = new Set([
+  "gmail.com",
+  "googlemail.com",
+  "yahoo.com",
+  "yahoo.co.in",
+  "outlook.com",
+  "hotmail.com",
+  "live.com",
+  "icloud.com",
+  "proton.me",
+  "protonmail.com",
+  "rediffmail.com",
+]);
+
 export function isCampusId(value: string): boolean {
   return CAMPUS_ID.test(value.trim().toUpperCase());
+}
+
+export function isStudentId(value: string): boolean {
+  return value.trim().toUpperCase().startsWith("VTU");
+}
+
+/**
+ * Students: {VTUid}@….edu.in
+ * Faculty:  {name}{staffNumber}@….edu.in
+ */
+export function validateCampusEmail(email: string, campusId: string): string | null {
+  const raw = email.trim();
+  if (!raw) return "College email is required.";
+
+  const at = raw.indexOf("@");
+  if (at < 1) return "Enter a valid college email.";
+  const local = raw.slice(0, at).toLowerCase();
+  const domain = raw.slice(at + 1).toLowerCase();
+
+  if (PERSONAL_DOMAINS.has(domain) || !domain.endsWith(".edu.in")) {
+    return "Use your college email ending in .edu.in (Gmail and personal mail are not allowed).";
+  }
+  if (!/^[^\s@]+@[^\s@]+\.edu\.in$/i.test(raw)) {
+    return "Use your college email ending in .edu.in.";
+  }
+
+  const cid = campusId.trim().toUpperCase();
+  const tail = cid.replace(/^(VTU|TTS)/, "");
+
+  if (isStudentId(cid)) {
+    const compact = local.replace(/[._-]/g, "");
+    if (compact !== cid.toLowerCase() && compact !== `vtu${tail.toLowerCase()}`) {
+      return `Student email must be your VTU ID, e.g. ${cid.toLower()}@college.edu.in`;
+    }
+    return null;
+  }
+
+  // Faculty / staff
+  if (!/^[a-z][a-z._-]*\d{3,}$/.test(local)) {
+    return `Faculty email must be your name followed by your staff number, e.g. nihal${tail.toLower()}@college.edu.in`;
+  }
+  if (!local.endsWith(tail.toLowerCase())) {
+    return `Faculty email must end with your staff number (${tail}), e.g. name${tail.toLower()}@college.edu.in`;
+  }
+  return null;
 }
 
 export function validateLogin(vtuId: string, password: string): FieldErrors {
@@ -43,11 +102,8 @@ export function validateRegister(form: {
   }
   if (!form.full_name.trim()) errors.full_name = "Full name is required.";
   if (!form.department.trim()) errors.department = "Department is required.";
-  if (!form.email.trim()) {
-    errors.email = "College email is required.";
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-    errors.email = "Enter a valid email address.";
-  }
+  const emailError = validateCampusEmail(form.email, form.vtu_id);
+  if (emailError) errors.email = emailError;
   if (!form.phone.trim()) {
     errors.phone = "Phone number is required.";
   } else if (!/^\d{10}$/.test(form.phone.trim())) {

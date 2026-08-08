@@ -275,14 +275,19 @@ export function LoginScreen({ navigation, route }: Props) {
               error={fieldErrors.department}
             />
             <Field
-              label="College email"
+              label="College email (.edu.in)"
               icon="mail-outline"
               value={form.email}
               onChangeText={(v) => {
                 setForm((p) => ({ ...p, email: v }));
                 clearField("email");
               }}
-              placeholder="you@college.edu"
+              placeholder={
+                vtuId.trim().toUpperCase().startsWith("TTS")
+                  ? "name27680@college.edu.in"
+                  : "vtu27680@college.edu.in"
+              }
+              autoCapitalize="none"
               error={fieldErrors.email}
             />
             <Field

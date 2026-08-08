@@ -8,6 +8,7 @@ from app.auth import create_access_token, get_current_user, hash_password, verif
 from app.database import get_db
 from app.models import User
 from app.schemas import TokenResponse, UserLogin, UserPublic, UserRegister
+from app.services.campus_email import validate_campus_email
 from app.services.campus_id import (
     CAMPUS_ID_ERROR,
     is_campus_id,
@@ -22,16 +23,19 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def register(payload: UserRegister, db: Session = Depends(get_db)):
     if not is_campus_id(payload.vtu_id):
         raise HTTPException(status_code=400, detail=CAMPUS_ID_ERROR)
+    email_error = validate_campus_email(str(payload.email), payload.vtu_id)
+    if email_error:
+        raise HTTPException(status_code=400, detail=email_error)
     if db.query(User).filter(User.vtu_id == payload.vtu_id).first():
         raise HTTPException(status_code=400, detail="This ID is already registered.")
-    if db.query(User).filter(User.email == payload.email).first():
+    if db.query(User).filter(User.email == str(payload.email).strip().lower()).first():
         raise HTTPException(status_code=400, detail="This email is already registered.")
 
     user = User(
         vtu_id=payload.vtu_id,
         full_name=payload.full_name,
         department=payload.department,
-        email=payload.email,
+        email=str(payload.email).strip().lower(),
         phone=payload.phone,
         password_hash=hash_password(payload.password),
         role=role_for_campus_id(payload.vtu_id),

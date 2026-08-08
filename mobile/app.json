@@ -2,7 +2,7 @@
   "expo": {
     "name": "FYT",
     "slug": "foundyourthing",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -10,6 +10,14 @@
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#09122C"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/c42fe662-06fd-4195-aa8e-1cf332b5cb2b",
+      "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD"
     },
     "ios": {
       "supportsTablet": true,
@@ -42,7 +50,8 @@
           "photosPermission": "Allow FoundYourThing to choose photos of lost or found valuable items from your gallery."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-updates"
     ],
     "extra": {
       "eas": {

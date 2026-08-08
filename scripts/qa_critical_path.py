@@ -87,7 +87,7 @@ def main() -> None:
         "vtu_id": f"VTUQA{suffix}A",
         "full_name": "QA User A",
         "department": "CSE",
-        "email": f"qa_a_{suffix}@college.edu",
+        "email": f"vtuqa{suffix}a@college.edu.in",
         "phone": "9876543210",
         "password": "testpass123",
     }
@@ -95,7 +95,7 @@ def main() -> None:
         "vtu_id": f"VTUQA{suffix}B",
         "full_name": "QA User B",
         "department": "CSE",
-        "email": f"qa_b_{suffix}@college.edu",
+        "email": f"vtuqa{suffix}b@college.edu.in",
         "phone": "9876543211",
         "password": "testpass123",
     }

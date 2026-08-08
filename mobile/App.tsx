@@ -21,6 +21,7 @@ import { ErrorBoundary } from "./src/components/ErrorBoundary";
 import { KeyboardProvider } from "./src/components/Keyboard";
 import { AppNavigator } from "./src/navigation/AppNavigator";
 import { COLORS } from "./src/constants/config";
+import { checkForAppUpdates } from "./src/lib/checkForUpdates";
 
 export default function App() {
   const [fontsLoaded] = useFonts({
@@ -37,6 +38,10 @@ export default function App() {
   React.useEffect(() => {
     const id = setTimeout(() => setFontsTimedOut(true), 2500);
     return () => clearTimeout(id);
+  }, []);
+
+  React.useEffect(() => {
+    void checkForAppUpdates();
   }, []);
 
   if (!fontsLoaded && !fontsTimedOut) {
