@@ -35,9 +35,17 @@ jobs:
       - name: Setup EAS
         uses: expo/expo-github-action@v8
         with:
-          eas-version: latest
+          eas-version: 24.7.0
           token: ${{ secrets.EXPO_TOKEN }}
+      - name: Verify EAS authentication
+        run: eas whoami
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       - name: Publish update
-        run: npx eas-cli update --channel ${{ inputs.channel || 'preview' }} --non-interactive --message "${{ github.event.head_commit.message || 'manual update' }}"
+        run: >
+          eas update
+          --channel "${{ inputs.channel || 'preview' }}"
+          --non-interactive
+          --message "${{ github.event.head_commit.message || 'manual update' }}"
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

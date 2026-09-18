@@ -21,10 +21,14 @@ jobs:
       - name: Setup EAS
         uses: expo/expo-github-action@v8
         with:
-          eas-version: latest
+          eas-version: 24.7.0
           token: ${{ secrets.EXPO_TOKEN }}
+      - name: Verify EAS authentication
+        run: eas whoami
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       - name: Build preview APK
-        run: npx eas-cli build -p android --profile preview --non-interactive --wait
+        run: eas build -p android --profile preview --non-interactive --wait
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
       - name: Print artifact note
