@@ -249,6 +249,8 @@ FoundYourThing supports safer, more organized campus communities by helping stud
 - [Architecture](docs/ARCHITECTURE.md)
 - [Server connection guide](docs/CONNECTION.md)
 - [GitHub workflow](docs/GITHUB.md)
+- [Deploy (Render, Supabase, EAS)](docs/DEPLOY.md)
+- [Environment & operations](docs/ENVIRONMENT.md) — what's live, how updates ship, CLI access
 
 ---
 

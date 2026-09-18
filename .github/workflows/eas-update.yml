@@ -1,0 +1,43 @@
+name: Publish EAS Update (OTA)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+      - "!mobile/eas.json"
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: "EAS Update channel to publish to"
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - production
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - name: Install dependencies
+        run: npm ci
+      - name: Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Publish update
+        run: npx eas-cli update --channel ${{ inputs.channel || 'preview' }} --non-interactive --message "${{ github.event.head_commit.message || 'manual update' }}"
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
