@@ -2,7 +2,7 @@ import React from "react";
 import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { ConnectionBanner } from "../components/ConnectionBanner";
-import { COLORS, FONTS, RADIUS, SHADOW } from "../constants/config";
+import { COLORS, CONTENT_MAX_WIDTH, FONTS, RADIUS, SHADOW } from "../constants/config";
 
 type Section = {
   icon: React.ComponentProps<typeof Ionicons>["name"];
@@ -85,7 +85,13 @@ export function AboutScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
-  scroll: { padding: 20, paddingBottom: 48 },
+  scroll: {
+    padding: 20,
+    paddingBottom: 48,
+    width: "100%",
+    maxWidth: CONTENT_MAX_WIDTH,
+    alignSelf: "center",
+  },
   uniRow: { alignItems: "center", marginBottom: 8 },
   uniLogo: { width: 200, height: 72 },
   title: {

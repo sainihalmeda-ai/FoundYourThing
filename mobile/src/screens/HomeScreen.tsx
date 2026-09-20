@@ -14,7 +14,7 @@ import { StatsStrip } from "../components/StatsStrip";
 import { TrustBadges } from "../components/TrustBadges";
 import { AppButton } from "../components/Ui";
 import { useAuth } from "../context/AuthContext";
-import { COLORS, FONTS, SHADOW } from "../constants/config";
+import { COLORS, CONTENT_MAX_WIDTH, FONTS, RADIUS, SHADOW } from "../constants/config";
 import { openFytApkPage } from "../lib/apk";
 import { RootStackParamList } from "../navigation/types";
 
@@ -75,13 +75,31 @@ export function HomeScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <PageEnter>
-          <View style={styles.headerRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.eyebrow}>Welcome back</Text>
-              <Text style={styles.name}>{firstName}</Text>
-              <Text style={styles.vtu}>{user?.vtu_id}</Text>
+          <View style={styles.banner}>
+            <View style={styles.bannerBrand}>
+              <View style={styles.bannerMark}>
+                <Text style={styles.bannerMarkText}>FYT</Text>
+              </View>
+              <View style={styles.bannerText}>
+                <Text style={styles.bannerTitle} numberOfLines={1}>
+                  FoundYourThing
+                </Text>
+                <Text style={styles.bannerSubtitle} numberOfLines={1}>
+                  Campus Lost &amp; Found · Vel Tech
+                </Text>
+              </View>
             </View>
-            <SessionBanner />
+            <View style={styles.bannerSession}>
+              <SessionBanner />
+            </View>
+          </View>
+
+          <View style={styles.welcomeStrip}>
+            <Text style={styles.welcomeText}>
+              Hi <Text style={styles.welcomeName}>{firstName}</Text>
+              {user?.vtu_id ? ` (${user.vtu_id})` : ""}
+            </Text>
+            <Text style={styles.welcomeSub}>Welcome back to your dashboard.</Text>
           </View>
 
           <StatsStrip
@@ -190,35 +208,79 @@ export function HomeScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
-  scroll: { paddingHorizontal: 20, paddingTop: 20 },
-  headerRow: {
+  scroll: {
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    width: "100%",
+    maxWidth: CONTENT_MAX_WIDTH,
+    alignSelf: "center",
+  },
+  banner: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    marginBottom: 28,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.xl,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    ...SHADOW.soft,
   },
-  eyebrow: {
-    fontFamily: FONTS.sansMedium,
+  bannerBrand: { flexDirection: "row", alignItems: "center", gap: 10, flexShrink: 1, minWidth: 0 },
+  bannerMark: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  bannerText: { flexShrink: 1, minWidth: 0 },
+  bannerSession: { flexShrink: 0 },
+  bannerMarkText: {
+    fontFamily: FONTS.sansBold,
     fontSize: 12,
-    color: COLORS.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 1.4,
+    color: "#fff",
+    letterSpacing: 0.4,
   },
-  name: {
-    fontFamily: FONTS.display,
-    fontSize: 38,
+  bannerTitle: {
+    fontFamily: FONTS.displayMedium,
+    fontSize: 16,
+    color: "#fff",
+    letterSpacing: -0.2,
+  },
+  bannerSubtitle: {
+    marginTop: 2,
+    fontFamily: FONTS.sansMedium,
+    fontSize: 10.5,
+    color: "rgba(255,255,255,0.72)",
+  },
+  welcomeStrip: {
+    backgroundColor: COLORS.card,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.accent,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  welcomeText: {
+    fontFamily: FONTS.sansSemi,
+    fontSize: 15,
     color: COLORS.text,
-    letterSpacing: -0.6,
-    marginTop: 10,
-    lineHeight: 44,
   },
-  vtu: {
-    fontFamily: FONTS.sansMedium,
+  welcomeName: {
+    fontFamily: FONTS.displayMedium,
+  },
+  welcomeSub: {
+    marginTop: 4,
+    fontFamily: FONTS.sans,
     fontSize: 12,
     color: COLORS.textMuted,
-    marginTop: 8,
-    letterSpacing: 0.3,
   },
   tileInk: {
     backgroundColor: COLORS.inkTop,

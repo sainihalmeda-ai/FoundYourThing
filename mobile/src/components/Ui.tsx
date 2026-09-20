@@ -11,7 +11,7 @@ import {
   ViewStyle,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { COLORS, FONTS, RADIUS, SHADOW } from "../constants/config";
+import { COLORS, CONTENT_MAX_WIDTH, FONTS, RADIUS, SHADOW } from "../constants/config";
 import { ValidationMessage } from "./states/ValidationMessage";
 
 type BtnVariant = "primary" | "secondary" | "ghost" | "danger" | "gold";
@@ -416,6 +416,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
     padding: 20,
+    width: "100%",
+    maxWidth: CONTENT_MAX_WIDTH,
+    alignSelf: "center",
   },
   screenTitle: {
     fontSize: 26,

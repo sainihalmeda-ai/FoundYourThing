@@ -29,7 +29,7 @@ import { EmptyState, SuccessState } from "../components/states";
 import { useAuth } from "../context/AuthContext";
 import { matchConfidence } from "../lib/matchConfidence";
 import { RootStackParamList } from "../navigation/types";
-import { COLORS, FONTS, RADIUS, SHADOW } from "../constants/config";
+import { COLORS, CONTENT_MAX_WIDTH, FONTS, RADIUS, SHADOW } from "../constants/config";
 import type { Item, MatchResult } from "../types";
 import { ApiError } from "../types";
 
@@ -406,7 +406,12 @@ export function ItemDetailScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
-  scroll: { paddingBottom: 40 },
+  scroll: {
+    paddingBottom: 40,
+    width: "100%",
+    maxWidth: CONTENT_MAX_WIDTH,
+    alignSelf: "center",
+  },
   hero: {
     width: "100%",
     height: 320,

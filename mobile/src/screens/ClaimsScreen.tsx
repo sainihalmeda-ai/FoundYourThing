@@ -16,7 +16,7 @@ import { AppButton, Badge } from "../components/Ui";
 import { EmptyState, SuccessState } from "../components/states";
 import { useAuth } from "../context/AuthContext";
 import { dismissIncomingClaim } from "../lib/acceptedClaimNotices";
-import { COLORS, FONTS, RADIUS, SHADOW } from "../constants/config";
+import { COLORS, CONTENT_MAX_WIDTH, FONTS, RADIUS, SHADOW } from "../constants/config";
 import type { Claim } from "../types";
 import { ApiError } from "../types";
 
@@ -185,6 +185,9 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
     zIndex: 2,
     backgroundColor: "transparent",
+    width: "100%",
+    maxWidth: CONTENT_MAX_WIDTH,
+    alignSelf: "center",
   },
   headerTop: {
     flexDirection: "row",
@@ -207,7 +210,15 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     lineHeight: 18,
   },
-  list: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 24, flexGrow: 1 },
+  list: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 24,
+    flexGrow: 1,
+    width: "100%",
+    maxWidth: CONTENT_MAX_WIDTH,
+    alignSelf: "center",
+  },
   card: {
     backgroundColor: COLORS.card,
     borderRadius: 20,

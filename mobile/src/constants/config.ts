@@ -78,6 +78,14 @@ export const SHADOW = {
   },
 };
 
+/**
+ * Cap single-column screens at a sane app width — on a wide desktop/web
+ * viewport (this is a VTU "mini app", often opened in a normal browser tab
+ * rather than a phone), cards otherwise stretch edge-to-edge. Has no effect
+ * on phone widths, which are already narrower than this.
+ */
+export const CONTENT_MAX_WIDTH = 640;
+
 /** Floating bottom nav metrics — keep scroll content clear of the bar. */
 export const TAB_BAR = {
   height: 68,
