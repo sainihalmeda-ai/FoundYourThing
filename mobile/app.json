@@ -9,7 +9,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#09122C"
+      "backgroundColor": "#141F42"
     },
     "runtimeVersion": {
       "policy": "appVersion"
@@ -26,7 +26,7 @@
     "android": {
       "package": "com.foundyourthing.app",
       "adaptiveIcon": {
-        "backgroundColor": "#09122C",
+        "backgroundColor": "#141F42",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"

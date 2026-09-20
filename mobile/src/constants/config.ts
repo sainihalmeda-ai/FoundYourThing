@@ -2,8 +2,11 @@ import { Platform } from "react-native";
 import Constants from "expo-constants";
 
 /**
- * Campus Connect design tokens (cool academic greys + navy + teal).
- * Source: campus-connect styles.css — UX only; no functional meaning.
+ * Vel Tech University design tokens (navy + crimson, sampled directly from
+ * the official crest — see mobile/assets/veltech-logo.png). Previously a
+ * generic navy/teal "campus connect" palette; swapped for the Sep 2026
+ * pitch to Vel Tech Rangarajan Dr. Sagunthala R&D Institute of Science and
+ * Technology, Avadi, Chennai.
  */
 export const COLORS = {
   background: "#F4F5F7",
@@ -12,10 +15,10 @@ export const COLORS = {
   card: "#FFFFFF",
   text: "#111827",
   textMuted: "#667085",
-  primary: "#102A56",
-  primaryDark: "#09182F",
+  primary: "#223874",
+  primaryDark: "#141F42",
   primaryForeground: "#FFFFFF",
-  accent: "#009CA5",
+  accent: "#A91F23",
   accentForeground: "#FFFFFF",
   gold: "#C89B3C",
   goldForeground: "#2A1E06",
@@ -26,9 +29,9 @@ export const COLORS = {
   divider: "#ECEFF3",
   input: "#E4E7EC",
   offline: "#667085",
-  inkTop: "#102A56",
-  inkBottom: "#09182F",
-  ring: "#009CA5",
+  inkTop: "#223874",
+  inkBottom: "#141F42",
+  ring: "#A91F23",
 };
 
 export const FONTS = {
@@ -67,7 +70,7 @@ export const SHADOW = {
     elevation: 6,
   },
   glow: {
-    shadowColor: "#009CA5",
+    shadowColor: "#A91F23",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.14,
     shadowRadius: 4,

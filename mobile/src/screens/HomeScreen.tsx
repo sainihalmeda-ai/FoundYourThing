@@ -4,12 +4,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { fetchIncomingClaims } from "../api/auth";
+import { fetchIncomingClaims, fetchStats } from "../api/auth";
 import { ConnectionBanner } from "../components/ConnectionBanner";
 import { ConnectionGate } from "../components/ConnectionGate";
 import { PageEnter } from "../components/PageEnter";
 import { DaylightBackdrop, GridPlot } from "../components/SpatialBackdrop";
 import { SessionBanner } from "../components/SessionBanner";
+import { StatsStrip } from "../components/StatsStrip";
+import { TrustBadges } from "../components/TrustBadges";
 import { AppButton } from "../components/Ui";
 import { useAuth } from "../context/AuthContext";
 import { COLORS, FONTS, SHADOW } from "../constants/config";
@@ -21,6 +23,11 @@ export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [pendingCount, setPendingCount] = useState(0);
+  const [stats, setStats] = useState<{
+    items_reported: number;
+    items_returned: number;
+    registered_users: number;
+  } | null>(null);
 
   const firstName =
     user?.full_name?.trim().split(/\s+/)[0] ||
@@ -37,6 +44,15 @@ export function HomeScreen() {
           if (alive) setPendingCount(claims.filter((c) => c.status === "pending").length);
         } catch {
           if (alive) setPendingCount(0);
+        }
+      })();
+      (async () => {
+        if (!token) return;
+        try {
+          const data = await fetchStats(token);
+          if (alive) setStats(data);
+        } catch {
+          // Leave stats null — the strip just shows a loading dash, not a fake number.
         }
       })();
       return () => {
@@ -67,6 +83,15 @@ export function HomeScreen() {
             </View>
             <SessionBanner />
           </View>
+
+          <StatsStrip
+            loading={!stats}
+            stats={[
+              { label: "Items reported", value: stats?.items_reported ?? 0 },
+              { label: "Items returned", value: stats?.items_returned ?? 0 },
+              { label: "Verified accounts", value: stats?.registered_users ?? 0 },
+            ]}
+          />
 
           <Pressable
             style={({ pressed }) => [styles.tileInk, pressed && styles.pressed]}
@@ -135,12 +160,7 @@ export function HomeScreen() {
             </Text>
           </View>
 
-          <View style={styles.privacyNote}>
-            <Ionicons name="shield-checkmark" size={14} color={COLORS.accent} />
-            <Text style={styles.privacyText}>
-              VTU ID is the only thing others see until you both accept a claim.
-            </Text>
-          </View>
+          <TrustBadges />
 
           <Pressable
             style={({ pressed }) => [styles.apkRow, pressed && styles.pressed]}
@@ -148,6 +168,16 @@ export function HomeScreen() {
           >
             <Ionicons name="logo-android" size={16} color={COLORS.accent} />
             <Text style={styles.apkRowText}>Get the Android app · Download FYT APK</Text>
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [styles.apkRow, pressed && styles.pressed]}
+            onPress={() => navigation.navigate("About")}
+          >
+            <Ionicons name="information-circle-outline" size={16} color={COLORS.textMuted} />
+            <Text style={[styles.apkRowText, { color: COLORS.textMuted }]}>
+              About FoundYourThing & privacy model
+            </Text>
           </Pressable>
 
           <AppButton label="Log out" onPress={logout} variant="ghost" style={{ marginTop: 8 }} />
@@ -330,20 +360,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.textMuted,
     lineHeight: 18,
-  },
-  privacyNote: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 12,
-    paddingHorizontal: 4,
-  },
-  privacyText: {
-    flex: 1,
-    fontFamily: FONTS.sans,
-    fontSize: 11,
-    color: COLORS.textMuted,
-    lineHeight: 16,
   },
   apkRow: {
     flexDirection: "row",

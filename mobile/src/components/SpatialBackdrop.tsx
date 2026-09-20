@@ -92,7 +92,7 @@ export function InkSurface({ children, style }: { children?: React.ReactNode; st
         Platform.OS === "web"
           ? ({
               backgroundImage:
-                "radial-gradient(900px 460px at 20% 0%, rgba(16,42,86,0.85), transparent 62%), linear-gradient(180deg, #102A56, #09182F)",
+                "radial-gradient(900px 460px at 20% 0%, rgba(34,56,116,0.85), transparent 62%), linear-gradient(180deg, #223874, #141F42)",
             } as ViewStyle)
           : null,
         style,

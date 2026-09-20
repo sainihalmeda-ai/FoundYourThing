@@ -1,5 +1,5 @@
 import React from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import {
   BottomTabBar,
@@ -9,6 +9,7 @@ import {
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { HomeButton } from "../components/HomeButton";
+import { AboutScreen } from "../screens/AboutScreen";
 import { ClaimsScreen } from "../screens/ClaimsScreen";
 import { FeedScreen } from "../screens/FeedScreen";
 import { HomeScreen } from "../screens/HomeScreen";
@@ -82,6 +83,8 @@ function MainTabs() {
         tabBarItemStyle: styles.tabItem,
         tabBarLabelStyle: styles.tabLabel,
         sceneStyle: { backgroundColor: COLORS.background },
+        // Cross-fade + shift instead of an instant cut when switching tabs.
+        animation: "shift",
       }}
     >
       <Tab.Screen
@@ -138,8 +141,12 @@ export function AppStack() {
         },
         contentStyle: { backgroundColor: COLORS.background },
         headerRight: () => <HomeButton />,
-        animation: Platform.OS === "ios" ? "slide_from_right" : "fade_from_bottom",
-        animationDuration: 220,
+        // `fade_from_bottom` isn't implemented by react-native-screens on
+        // Android/web, so those platforms were getting an instant cut with
+        // no animation at all. slide_from_right has consistent cross-platform
+        // (including web) support.
+        animation: "slide_from_right",
+        animationDuration: 280,
       }}
     >
       <Stack.Screen
@@ -152,6 +159,7 @@ export function AppStack() {
       <Stack.Screen name="Home" component={HomeScreen} options={{ title: "FoundYourThing" }} />
       <Stack.Screen name="Feed" component={FeedScreen} options={{ title: "Campus feed" }} />
       <Stack.Screen name="Claims" component={ClaimsScreen} options={{ title: "Incoming requests" }} />
+      <Stack.Screen name="About" component={AboutScreen} options={{ title: "About" }} />
     </Stack.Navigator>
   );
 }

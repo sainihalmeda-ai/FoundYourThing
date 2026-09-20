@@ -173,7 +173,7 @@ const styles = StyleSheet.create({
   badge: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: "#102A56",
+    backgroundColor: "#223874",
   },
   badgeText: {
     color: "#FFFFFF",
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
   },
   retry: {
     alignSelf: "flex-start",
-    backgroundColor: "#102A56",
+    backgroundColor: "#223874",
     paddingHorizontal: 18,
     paddingVertical: 12,
     borderRadius: 999,
@@ -231,5 +231,5 @@ const styles = StyleSheet.create({
   },
   retryText: { color: "#fff", fontWeight: "700", fontSize: 14 },
   openBrowser: { alignSelf: "flex-start", paddingVertical: 8 },
-  openBrowserText: { color: "#009CA5", fontWeight: "600", fontSize: 14 },
+  openBrowserText: { color: "#A91F23", fontWeight: "600", fontSize: 14 },
 });

@@ -14,4 +14,5 @@ export type RootStackParamList = {
   Feed: undefined;
   ItemDetail: { itemId: number };
   Claims: undefined;
+  About: undefined;
 };

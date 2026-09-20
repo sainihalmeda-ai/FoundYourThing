@@ -91,7 +91,14 @@ const styles = StyleSheet.create({
     overflow: "visible",
   },
   compact: {
-    flex: 0,
+    // `flex: 0` (and even bare flexGrow/flexShrink without flexBasis) maps
+    // to `flex-basis: 0%` on React Native Web, which collapses this box to
+    // just its padding while `overflow: "visible"` still paints the
+    // (unclipped) content — visually overlapping whatever sits above it in
+    // the scroll flow. Explicit flexBasis: "auto" sizes it to content again.
+    flexGrow: 0,
+    flexShrink: 0,
+    flexBasis: "auto",
     paddingVertical: 48,
     paddingTop: 56,
     backgroundColor: "transparent",

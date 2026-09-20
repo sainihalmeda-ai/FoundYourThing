@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  Image,
   LayoutChangeEvent,
   Pressable,
   StyleSheet,
@@ -322,6 +323,17 @@ export function LoginScreen({ navigation, route }: Props) {
   const brandPanel = (
     <InkSurface style={styles.brandPanel}>
       <View style={styles.brandInner}>
+        <View style={styles.uniBadge}>
+          <Image
+            source={require("../../assets/veltech-logo.png")}
+            style={styles.uniLogo}
+            resizeMode="contain"
+          />
+        </View>
+        <Text style={styles.uniName}>
+          Vel Tech Rangarajan Dr. Sagunthala{"\n"}R&D Institute of Science and Technology
+        </Text>
+        <Text style={styles.uniLocation}>Deemed to be University · Avadi, Chennai</Text>
         <View style={styles.brandBadge}>
           <Ionicons name="shield-checkmark" size={14} color={COLORS.accent} />
           <Text style={styles.brandBadgeText}>Privacy-first · VTU / TTS</Text>
@@ -348,7 +360,7 @@ export function LoginScreen({ navigation, route }: Props) {
           ))}
         </View>
         <Text style={styles.brandFoot}>
-          © FoundYourThing 2026 · Campus Lost & Found Office
+          © FoundYourThing 2026 · Proposed for Vel Tech University campus use
         </Text>
       </View>
     </InkSurface>
@@ -373,6 +385,16 @@ export function LoginScreen({ navigation, route }: Props) {
           </View>
         ) : (
           <View style={styles.mobileWrap}>
+            <View style={styles.mobileUniRow}>
+              <Image
+                source={require("../../assets/veltech-logo.png")}
+                style={styles.mobileUniLogo}
+                resizeMode="contain"
+              />
+              <Text style={styles.mobileUniText} numberOfLines={2}>
+                Vel Tech Rangarajan Dr. Sagunthala R&D Institute of Science and Technology
+              </Text>
+            </View>
             <Text style={styles.mobileBrand}>
               Found<Text style={styles.brandAccent}>Your</Text>Thing
             </Text>
@@ -411,7 +433,29 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   brandInner: { flex: 1, justifyContent: "space-between" },
+  uniBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(255,255,255,0.94)",
+    borderRadius: RADIUS.xl,
+    padding: 10,
+    ...SHADOW.soft,
+  },
+  uniLogo: { width: 180, height: 64 },
+  uniName: {
+    marginTop: 14,
+    fontFamily: FONTS.sansSemi,
+    fontSize: 13,
+    lineHeight: 18,
+    color: "rgba(255,255,255,0.9)",
+  },
+  uniLocation: {
+    marginTop: 4,
+    fontFamily: FONTS.sans,
+    fontSize: 11,
+    color: "rgba(255,255,255,0.55)",
+  },
   brandBadge: {
+    marginTop: 20,
     alignSelf: "flex-start",
     flexDirection: "row",
     alignItems: "center",
@@ -495,12 +539,26 @@ const styles = StyleSheet.create({
   },
   formInner: { width: "100%" },
   mobileWrap: { width: "100%", maxWidth: 480, alignSelf: "center" },
+  mobileUniRow: {
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  mobileUniLogo: { width: 40, height: 40 },
+  mobileUniText: {
+    flex: 1,
+    fontFamily: FONTS.sansMedium,
+    fontSize: 11,
+    lineHeight: 14,
+    color: COLORS.textMuted,
+  },
   mobileBrand: {
     fontFamily: FONTS.display,
     fontSize: 28,
     color: COLORS.text,
     marginBottom: 18,
-    marginTop: 12,
+    marginTop: 10,
   },
   formHeader: { marginBottom: 8 },
   formHeaderWide: { alignItems: "center" },

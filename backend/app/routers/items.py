@@ -58,6 +58,25 @@ def get_metadata():
     }
 
 
+@router.get("/stats")
+def get_stats(db: Session = Depends(get_db)):
+    """Real, live counts for the Home screen's trust strip — never fabricated."""
+    items_reported = db.query(Item).count()
+    items_returned = (
+        db.query(Item)
+        .filter(Item.status.in_([ItemStatus.RECOVERED, ItemStatus.CLOSED]))
+        .count()
+    )
+    active_connections = db.query(Item).filter(Item.status == ItemStatus.CONNECTED).count()
+    registered_users = db.query(User).count()
+    return {
+        "items_reported": items_reported,
+        "items_returned": items_returned,
+        "active_connections": active_connections,
+        "registered_users": registered_users,
+    }
+
+
 @router.get("", response_model=list[ItemPublic])
 def list_items(
     item_type: str | None = None,

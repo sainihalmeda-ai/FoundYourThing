@@ -45,6 +45,15 @@ export async function fetchMetadata(token: string) {
   }>("/api/items/meta", { token });
 }
 
+export async function fetchStats(token: string) {
+  return apiRequest<{
+    items_reported: number;
+    items_returned: number;
+    active_connections: number;
+    registered_users: number;
+  }>("/api/items/stats", { token });
+}
+
 export async function fetchItems(
   token: string,
   options?: { itemType?: "lost" | "found"; mine?: boolean },
