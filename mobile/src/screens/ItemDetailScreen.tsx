@@ -208,7 +208,9 @@ export function ItemDetailScreen({ route, navigation }: Props) {
                 {item.category_label} · {item.location}
               </Text>
             </View>
-            <Text style={styles.meta}>Reporter · {item.reporter_vtu_id}</Text>
+            <Text style={[styles.meta, styles.reporterMeta]}>
+              Reporter · {item.reporter_vtu_id}
+            </Text>
             {item.reporter_name ? (
               <Text style={styles.meta}>Name · {item.reporter_name}</Text>
             ) : null}
@@ -441,6 +443,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.sans,
     fontSize: 13,
   },
+  reporterMeta: { marginTop: 10 },
   description: {
     marginTop: 14,
     color: COLORS.text,
