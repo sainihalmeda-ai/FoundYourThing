@@ -1,38 +1,47 @@
-import React, { useCallback, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import React, { useCallback, useEffect, useState } from "react";
+import { StyleSheet, View } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { fetchIncomingClaims, fetchStats } from "../api/auth";
+import { fetchIncomingClaims, fetchItems, fetchStats } from "../api/auth";
 import { ConnectionBanner } from "../components/ConnectionBanner";
 import { ConnectionGate } from "../components/ConnectionGate";
-import { PageEnter } from "../components/PageEnter";
-import { DaylightBackdrop, GridPlot } from "../components/SpatialBackdrop";
-import { SessionBanner } from "../components/SessionBanner";
-import { StatsStrip } from "../components/StatsStrip";
-import { TrustBadges } from "../components/TrustBadges";
-import { AppButton } from "../components/Ui";
+import { DaylightBackdrop } from "../components/SpatialBackdrop";
+import { HomeLayoutSwitcher } from "../components/home/HomeLayoutSwitcher";
+import { HomePortal } from "../components/home/HomePortal";
+import { HomeGrid } from "../components/home/HomeGrid";
+import { HomeFeed } from "../components/home/HomeFeed";
+import type { HomeStats } from "../components/home/types";
 import { useAuth } from "../context/AuthContext";
-import { COLORS, CONTENT_MAX_WIDTH, FONTS, RADIUS, SHADOW } from "../constants/config";
+import { COLORS, CONTENT_MAX_WIDTH } from "../constants/config";
+import { getHomeLayout, saveHomeLayout, type HomeLayout } from "../lib/homeLayoutPreference";
 import { openFytApkPage } from "../lib/apk";
 import { RootStackParamList } from "../navigation/types";
+import type { Item } from "../types";
 
 export function HomeScreen() {
   const { user, token, logout } = useAuth();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [pendingCount, setPendingCount] = useState(0);
-  const [stats, setStats] = useState<{
-    items_reported: number;
-    items_returned: number;
-    registered_users: number;
-  } | null>(null);
+  const [stats, setStats] = useState<HomeStats>(null);
+  const [layout, setLayout] = useState<HomeLayout>("portal");
+  const [recentItems, setRecentItems] = useState<Item[]>([]);
+  const [recentLoading, setRecentLoading] = useState(true);
 
   const firstName =
     user?.full_name?.trim().split(/\s+/)[0] ||
     user?.vtu_id?.replace(/^VTU/i, "") ||
     "Student";
+
+  useEffect(() => {
+    getHomeLayout().then(setLayout);
+  }, []);
+
+  const handleLayoutChange = useCallback((next: HomeLayout) => {
+    setLayout(next);
+    saveHomeLayout(next);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -61,146 +70,76 @@ export function HomeScreen() {
     }, [token]),
   );
 
+  const loadRecent = useCallback(async () => {
+    if (!token) return;
+    try {
+      const items = await fetchItems(token);
+      const sorted = [...items].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
+      setRecentItems(sorted.slice(0, 6));
+    } catch {
+      // Leave whatever was already loaded — the feed just won't refresh this time.
+    } finally {
+      setRecentLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (layout === "feed") loadRecent();
+  }, [layout, loadRecent]);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (layout === "feed") loadRecent();
+    }, [layout, loadRecent]),
+  );
+
+  const shared = {
+    firstName,
+    vtuId: user?.vtu_id,
+    stats,
+    statsLoading: !stats,
+    pendingCount,
+    // The switcher dock above already eats the safe-area inset — variants
+    // just need a small gap under it, not the inset again.
+    topInset: 14,
+    onReportLost: () => navigation.navigate("Report", { mode: "lost" }),
+    onReportFound: () => navigation.navigate("Report", { mode: "found" }),
+    onBrowse: () => navigation.navigate("Feed"),
+    onRequests: () => navigation.navigate("Claims"),
+    onOpenApk: openFytApkPage,
+    onAbout: () => navigation.navigate("About"),
+    onLogout: logout,
+  };
+
   return (
     <ConnectionGate>
       <View style={styles.root}>
         <DaylightBackdrop />
         <ConnectionBanner />
-        <ScrollView
-          contentContainerStyle={[
-            styles.scroll,
-            { paddingTop: Math.max(insets.top, 12) + 8, paddingBottom: 28 },
+        <View
+          style={[
+            styles.switcherDock,
+            { paddingTop: Math.max(insets.top, 12) + 8 },
           ]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
         >
-          <PageEnter>
-          <View style={styles.banner}>
-            <View style={styles.bannerBrand}>
-              <View style={styles.bannerMark}>
-                <Text style={styles.bannerMarkText}>FYT</Text>
-              </View>
-              <View style={styles.bannerText}>
-                <Text style={styles.bannerTitle} numberOfLines={1}>
-                  FoundYourThing
-                </Text>
-                <Text style={styles.bannerSubtitle} numberOfLines={1}>
-                  Campus Lost &amp; Found · Vel Tech
-                </Text>
-              </View>
-            </View>
-            <View style={styles.bannerSession}>
-              <SessionBanner />
-            </View>
-          </View>
-
-          <View style={styles.welcomeStrip}>
-            <Text style={styles.welcomeText}>
-              Hi <Text style={styles.welcomeName}>{firstName}</Text>
-              {user?.vtu_id ? ` (${user.vtu_id})` : ""}
-            </Text>
-            <Text style={styles.welcomeSub}>Welcome back to your dashboard.</Text>
-          </View>
-
-          <StatsStrip
-            loading={!stats}
-            stats={[
-              { label: "Items reported", value: stats?.items_reported ?? 0 },
-              { label: "Items returned", value: stats?.items_returned ?? 0 },
-              { label: "Verified accounts", value: stats?.registered_users ?? 0 },
-            ]}
-          />
-
-          <Pressable
-            style={({ pressed }) => [styles.tileInk, pressed && styles.pressed]}
-            onPress={() => navigation.navigate("Report", { mode: "lost" })}
-          >
-            <GridPlot variant="ink" opacity={0.5} />
-            <View style={{ flex: 1, zIndex: 1 }}>
-              <Text style={styles.tileInkTitle}>I lost something</Text>
-              <Text style={styles.tileInkDesc}>Post a lost item — AI matches instantly.</Text>
-            </View>
-            <View style={[styles.tileInkArrow, { zIndex: 1 }]}>
-              <Ionicons name="arrow-up" size={18} color="#fff" style={{ transform: [{ rotate: "45deg" }] }} />
-            </View>
-          </Pressable>
-
-          <Pressable
-            style={({ pressed }) => [styles.tileCard, pressed && styles.pressed]}
-            onPress={() => navigation.navigate("Report", { mode: "found" })}
-          >
-            <View style={{ flex: 1 }}>
-              <Text style={styles.tileCardTitle}>I found something</Text>
-              <Text style={styles.tileCardDesc}>Return a valuable to its owner.</Text>
-            </View>
-            <View style={styles.tileMutedArrow}>
-              <Ionicons name="arrow-up" size={16} color={COLORS.primary} style={{ transform: [{ rotate: "45deg" }] }} />
-            </View>
-          </Pressable>
-
-          <View style={styles.secondaryRow}>
-            <Pressable
-              style={({ pressed }) => [styles.secondaryTile, pressed && styles.pressed]}
-              onPress={() => navigation.navigate("Feed")}
-            >
-              <View style={styles.secondaryIcon}>
-                <Ionicons name="search" size={16} color={COLORS.primary} />
-              </View>
-              <Text style={styles.secondaryLabel}>Browse feed</Text>
-            </Pressable>
-
-            <Pressable
-              style={({ pressed }) => [styles.secondaryTile, pressed && styles.pressed]}
-              onPress={() => navigation.navigate("Claims")}
-            >
-              <View style={styles.secondaryIcon}>
-                <Ionicons name="mail-outline" size={16} color={COLORS.primary} />
-              </View>
-              <Text style={styles.secondaryLabel}>Requests</Text>
-              {pendingCount > 0 ? (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{pendingCount > 9 ? "9+" : pendingCount}</Text>
-                </View>
-              ) : null}
-            </Pressable>
-          </View>
-
-          <View style={styles.policyCard}>
-            <View style={styles.policyHeader}>
-              <Ionicons name="sparkles" size={14} color={COLORS.accent} />
-              <Text style={styles.policyEyebrow}>Policy</Text>
-            </View>
-            <Text style={styles.policyBody}>
-              Valuables only. Phones, wallets, watches, IDs, bags, earbuds, keys, laptops.
-            </Text>
-            <Text style={styles.policyMuted}>
-              Pens, pencils and consumables aren’t accepted — it keeps the feed useful.
-            </Text>
-          </View>
-
-          <TrustBadges />
-
-          <Pressable
-            style={({ pressed }) => [styles.apkRow, pressed && styles.pressed]}
-            onPress={openFytApkPage}
-          >
-            <Ionicons name="logo-android" size={16} color={COLORS.accent} />
-            <Text style={styles.apkRowText}>Get the Android app · Download FYT APK</Text>
-          </Pressable>
-
-          <Pressable
-            style={({ pressed }) => [styles.apkRow, pressed && styles.pressed]}
-            onPress={() => navigation.navigate("About")}
-          >
-            <Ionicons name="information-circle-outline" size={16} color={COLORS.textMuted} />
-            <Text style={[styles.apkRowText, { color: COLORS.textMuted }]}>
-              About FoundYourThing & privacy model
-            </Text>
-          </Pressable>
-
-          <AppButton label="Log out" onPress={logout} variant="ghost" style={{ marginTop: 8 }} />
-          </PageEnter>
-        </ScrollView>
+          <HomeLayoutSwitcher value={layout} onChange={handleLayoutChange} />
+        </View>
+        <View style={{ flex: 1 }}>
+          {layout === "grid" ? (
+            <HomeGrid {...shared} />
+          ) : layout === "feed" ? (
+            <HomeFeed
+              {...shared}
+              recentItems={recentItems}
+              recentLoading={recentLoading}
+              onOpenItem={(itemId) => navigation.navigate("ItemDetail", { itemId })}
+            />
+          ) : (
+            <HomePortal {...shared} />
+          )}
+        </View>
       </View>
     </ConnectionGate>
   );
@@ -208,233 +147,11 @@ export function HomeScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
-  scroll: {
+  switcherDock: {
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingBottom: 8,
     width: "100%",
     maxWidth: CONTENT_MAX_WIDTH,
     alignSelf: "center",
   },
-  banner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.xl,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    ...SHADOW.soft,
-  },
-  bannerBrand: { flexDirection: "row", alignItems: "center", gap: 10, flexShrink: 1, minWidth: 0 },
-  bannerMark: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: "rgba(255,255,255,0.14)",
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  bannerText: { flexShrink: 1, minWidth: 0 },
-  bannerSession: { flexShrink: 0 },
-  bannerMarkText: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 12,
-    color: "#fff",
-    letterSpacing: 0.4,
-  },
-  bannerTitle: {
-    fontFamily: FONTS.displayMedium,
-    fontSize: 16,
-    color: "#fff",
-    letterSpacing: -0.2,
-  },
-  bannerSubtitle: {
-    marginTop: 2,
-    fontFamily: FONTS.sansMedium,
-    fontSize: 10.5,
-    color: "rgba(255,255,255,0.72)",
-  },
-  welcomeStrip: {
-    backgroundColor: COLORS.card,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.accent,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    marginBottom: 20,
-  },
-  welcomeText: {
-    fontFamily: FONTS.sansSemi,
-    fontSize: 15,
-    color: COLORS.text,
-  },
-  welcomeName: {
-    fontFamily: FONTS.displayMedium,
-  },
-  welcomeSub: {
-    marginTop: 4,
-    fontFamily: FONTS.sans,
-    fontSize: 12,
-    color: COLORS.textMuted,
-  },
-  tileInk: {
-    backgroundColor: COLORS.inkTop,
-    borderRadius: 20,
-    padding: 24,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    marginBottom: 12,
-    overflow: "hidden",
-    position: "relative",
-    ...SHADOW.soft,
-  },
-  tileInkTitle: {
-    fontFamily: FONTS.display,
-    fontSize: 22,
-    color: COLORS.primaryForeground,
-    letterSpacing: -0.4,
-  },
-  tileInkDesc: {
-    marginTop: 10,
-    fontFamily: FONTS.sans,
-    fontSize: 13,
-    color: "rgba(255,255,255,0.65)",
-    lineHeight: 20,
-  },
-  tileInkArrow: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.1)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  tileCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: 20,
-    padding: 24,
-    flexDirection: "row",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    gap: 12,
-    marginBottom: 20,
-    ...SHADOW.soft,
-  },
-  tileCardTitle: {
-    fontFamily: FONTS.display,
-    fontSize: 22,
-    color: COLORS.text,
-    letterSpacing: -0.4,
-  },
-  tileCardDesc: {
-    marginTop: 10,
-    fontFamily: FONTS.sans,
-    fontSize: 13,
-    color: COLORS.textMuted,
-    lineHeight: 20,
-  },
-  tileMutedArrow: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.surfaceMuted,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondaryRow: { flexDirection: "row", gap: 16, marginBottom: 20 },
-  secondaryTile: {
-    flex: 1,
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 18,
-    padding: 20,
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: 12,
-    position: "relative",
-    ...SHADOW.soft,
-  },
-  secondaryIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: COLORS.surfaceMuted,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  secondaryLabel: {
-    fontFamily: FONTS.sansSemi,
-    fontSize: 13,
-    color: COLORS.text,
-    letterSpacing: -0.2,
-  },
-  badge: {
-    position: "absolute",
-    top: 16,
-    right: 16,
-    minWidth: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: COLORS.danger,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 5,
-  },
-  badgeText: {
-    color: "#fff",
-    fontSize: 10,
-    fontFamily: FONTS.sansBold,
-  },
-  policyCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    padding: 24,
-    marginBottom: 14,
-    ...SHADOW.soft,
-  },
-  policyHeader: { flexDirection: "row", alignItems: "center", gap: 6 },
-  policyEyebrow: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 11,
-    color: COLORS.accent,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  policyBody: {
-    marginTop: 10,
-    fontFamily: FONTS.sansMedium,
-    fontSize: 15,
-    color: COLORS.text,
-    lineHeight: 21,
-  },
-  policyMuted: {
-    marginTop: 6,
-    fontFamily: FONTS.sans,
-    fontSize: 12,
-    color: COLORS.textMuted,
-    lineHeight: 18,
-  },
-  apkRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 4,
-    marginBottom: 4,
-  },
-  apkRowText: {
-    fontFamily: FONTS.sansSemi,
-    fontSize: 13,
-    color: COLORS.accent,
-  },
-  pressed: { opacity: 0.92, transform: [{ scale: 0.985 }] },
 });
