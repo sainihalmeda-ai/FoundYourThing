@@ -1,12 +1,36 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useConnection } from "../context/ConnectionContext";
 import { COLORS, FONTS, RADIUS } from "../constants/config";
 
+/**
+ * Every fresh page load re-checks the server from scratch (see
+ * ConnectionContext), which is correct — Render's free tier really does
+ * sleep. But a healthy local/warm server answers in well under a second,
+ * so showing "Waking campus server…" immediately made every single
+ * refresh flash a banner that read as a disconnect even when nothing was
+ * ever down. Only show it once "checking" has actually run long enough
+ * to plausibly be a real cold start.
+ */
+const CHECKING_BANNER_DELAY_MS = 900;
+
 export function ConnectionBanner() {
   const { state, refresh, dismissSlow } = useConnection();
+  const [showChecking, setShowChecking] = useState(false);
+
+  useEffect(() => {
+    if (state !== "checking") {
+      setShowChecking(false);
+      return;
+    }
+    const id = setTimeout(() => setShowChecking(true), CHECKING_BANNER_DELAY_MS);
+    return () => clearTimeout(id);
+  }, [state]);
 
   if (state === "online") {
+    return null;
+  }
+  if (state === "checking" && !showChecking) {
     return null;
   }
 
