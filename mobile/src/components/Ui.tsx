@@ -104,6 +104,8 @@ export function Field({
   textContentType = "none",
   error,
   icon,
+  multiline = false,
+  numberOfLines,
 }: {
   label: string;
   value: string;
@@ -117,6 +119,9 @@ export function Field({
   error?: string | null;
   /** Optional leading Ionicons glyph (campus-connect auth fields). */
   icon?: React.ComponentProps<typeof Ionicons>["name"];
+  /** Grows into a multi-line textarea instead of a single input row. */
+  multiline?: boolean;
+  numberOfLines?: number;
 }) {
   const [focused, setFocused] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
@@ -139,6 +144,7 @@ export function Field({
         }}
         style={[
           styles.fieldBox,
+          multiline && styles.fieldBoxMultiline,
           focused && styles.fieldFocused,
           error ? styles.fieldError : null,
         ]}
@@ -153,7 +159,11 @@ export function Field({
         ) : null}
         <TextInput
           ref={inputRef}
-          style={[styles.input, icon ? styles.inputWithIcon : null]}
+          style={[
+            styles.input,
+            icon ? styles.inputWithIcon : null,
+            multiline && styles.inputMultiline,
+          ]}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
@@ -166,6 +176,9 @@ export function Field({
           autoCorrect={false}
           spellCheck={false}
           editable={unlocked || focused}
+          multiline={multiline}
+          numberOfLines={numberOfLines}
+          textAlignVertical={multiline ? "top" : "center"}
           onFocus={() => {
             setUnlocked(true);
             setFocused(true);
@@ -339,6 +352,10 @@ const styles = StyleSheet.create({
     minHeight: 52,
     justifyContent: "center",
   },
+  fieldBoxMultiline: {
+    minHeight: 120,
+    justifyContent: "flex-start",
+  },
   fieldFocused: {
     borderColor: COLORS.accent,
     ...SHADOW.glow,
@@ -358,6 +375,7 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.sansSemi,
   },
   inputWithIcon: { paddingLeft: 44 },
+  inputMultiline: { minHeight: 100, paddingTop: 14 },
   chip: {
     borderWidth: 1,
     borderColor: COLORS.border,

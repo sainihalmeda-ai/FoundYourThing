@@ -30,6 +30,11 @@ services:
         value: "10"
       - key: LIVEGO_ENABLED
         value: "false"
+      # Comma-separated VTU/TTS IDs of the real enquiry team who can see
+      # safety/ragging reports. Set manually in the dashboard — empty means
+      # nobody (not even staff) can see reports until real people are named.
+      - key: ENQUIRY_TEAM_VTU_IDS
+        sync: false
 
   - type: web
     name: foundyourthing-web

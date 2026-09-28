@@ -1,7 +1,7 @@
 import { apiRequest } from "../api/client";
 import { UPLOAD_TIMEOUT_MS } from "../constants/config";
 import { clearToken, getToken, saveToken } from "../lib/tokenStorage";
-import type { Claim, Item, MatchResult, User } from "../types";
+import type { Claim, Concern, ConcernStatus, ConcernTeamView, Item, MatchResult, User } from "../types";
 
 export { clearToken, getToken, saveToken };
 
@@ -149,6 +149,48 @@ export async function reportClaimMismatch(token: string, claimId: number) {
   return apiRequest<Claim>(`/api/claims/${claimId}/mismatch`, {
     method: "POST",
     token,
+  });
+}
+
+/** Whether this account is on the enquiry-team allowlist (server-enforced either way). */
+export async function fetchConcernTeamAccess(token: string) {
+  return apiRequest<{ is_enquiry_team: boolean }>("/api/concerns/team-access", { token });
+}
+
+export async function createConcern(
+  token: string,
+  payload: { category: string; description: string; location?: string },
+) {
+  return apiRequest<Concern>("/api/concerns", {
+    method: "POST",
+    token,
+    body: payload,
+  });
+}
+
+/** The reporter's own submissions and their status — never anyone else's. */
+export async function fetchMyConcerns(token: string) {
+  return apiRequest<Concern[]>("/api/concerns/mine", { token });
+}
+
+/** Enquiry-team only — the server 403s anyone not on the allowlist. */
+export async function fetchAllConcerns(token: string) {
+  return apiRequest<ConcernTeamView[]>("/api/concerns", { token });
+}
+
+export async function fetchConcern(token: string, concernId: number) {
+  return apiRequest<ConcernTeamView>(`/api/concerns/${concernId}`, { token });
+}
+
+export async function updateConcern(
+  token: string,
+  concernId: number,
+  payload: { status: ConcernStatus; team_note: string },
+) {
+  return apiRequest<ConcernTeamView>(`/api/concerns/${concernId}`, {
+    method: "PATCH",
+    token,
+    body: payload,
   });
 }
 

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import Base, SessionLocal, engine, get_db
-from app.routers import auth, claims, items
+from app.routers import auth, claims, concerns, items
 from app.schemas import HealthResponse
 from app.services.refresh_scores import refresh_embeddings_and_scores
 from app.services.schema_migrate import ensure_schema
@@ -51,6 +51,7 @@ app.mount("/uploads", StaticFiles(directory=str(upload_dir)), name="uploads")
 app.include_router(auth.router, prefix="/api")
 app.include_router(items.router, prefix="/api")
 app.include_router(claims.router, prefix="/api")
+app.include_router(concerns.router, prefix="/api")
 
 
 @app.get("/api/media/{filename}")

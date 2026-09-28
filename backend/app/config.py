@@ -18,6 +18,11 @@ class Settings(BaseSettings):
     livego_enabled: bool = False
     # How fresh a found-report photo must be, in minutes, when LiveGo is on.
     live_photo_max_age_minutes: int = 30
+    # Comma-separated VTU/TTS IDs allowed to see and triage safety/ragging
+    # reports (app/services/enquiry_team.py). Empty until the real enquiry
+    # team's IDs are set here or in the host env — nobody can see reports
+    # until this is configured.
+    enquiry_team_vtu_ids: str = ""
 
     class Config:
         env_file = ".env"

@@ -22,6 +22,7 @@ export function HomeFeed({
   onRequests,
   onOpenApk,
   onAbout,
+  onSafety,
   onLogout,
   recentItems,
   recentLoading,
@@ -119,7 +120,7 @@ export function HomeFeed({
         )}
       </View>
 
-      <HomeUtilityFooter onOpenApk={onOpenApk} onAbout={onAbout} onLogout={onLogout} />
+      <HomeUtilityFooter onOpenApk={onOpenApk} onAbout={onAbout} onSafety={onSafety} onLogout={onLogout} />
     </ScrollView>
   );
 }

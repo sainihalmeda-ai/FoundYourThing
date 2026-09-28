@@ -24,6 +24,7 @@ export function HomePortal({
   onRequests,
   onOpenApk,
   onAbout,
+  onSafety,
   onLogout,
 }: HomeVariantProps) {
   return (
@@ -149,7 +150,7 @@ export function HomePortal({
         </Text>
       </Reveal>
 
-      <HomeUtilityFooter onOpenApk={onOpenApk} onAbout={onAbout} onLogout={onLogout} />
+      <HomeUtilityFooter onOpenApk={onOpenApk} onAbout={onAbout} onSafety={onSafety} onLogout={onLogout} />
     </ScrollView>
   );
 }

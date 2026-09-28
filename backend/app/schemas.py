@@ -4,7 +4,7 @@ from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
-from app.constants import VALUABLE_CATEGORIES
+from app.constants import CONCERN_CATEGORIES, VALUABLE_CATEGORIES
 
 _NAME_RE = re.compile(r"^[A-Za-z][A-Za-z .'-]{1,118}[A-Za-z.]$|^[A-Za-z]{2,120}$")
 _DEPT_RE = re.compile(r"^[A-Za-z][A-Za-z0-9 &/\-]{1,39}$")
@@ -164,6 +164,62 @@ class ClaimPublic(BaseModel):
     counterparty: UserPublic
     created_at: datetime
     responded_at: datetime | None = None
+
+
+class ConcernCreate(BaseModel):
+    category: str
+    description: str = Field(..., min_length=20, max_length=2000)
+    location: str = Field(default="", max_length=80)
+
+    @field_validator("category")
+    @classmethod
+    def validate_category(cls, value: str) -> str:
+        if value not in CONCERN_CATEGORIES:
+            allowed = ", ".join(CONCERN_CATEGORIES.keys())
+            raise ValueError(f"Choose a category: {allowed}")
+        return value
+
+    @field_validator("description")
+    @classmethod
+    def validate_description(cls, value: str) -> str:
+        text = value.strip()
+        if len(text) < 20:
+            raise ValueError("Please describe what happened in a bit more detail.")
+        return text
+
+
+class ConcernPublic(BaseModel):
+    """What the reporter sees about their own report — never anyone else's."""
+
+    id: int
+    category: str
+    category_label: str
+    description: str
+    location: str
+    status: str
+    team_note: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ConcernTeamView(ConcernPublic):
+    """Enquiry-team-only view — adds who filed it."""
+
+    reporter_vtu_id: str
+    reporter_name: str | None = None
+    reporter_phone: str | None = None
+    reporter_department: str | None = None
+
+
+class ConcernStatusUpdate(BaseModel):
+    status: Literal["received", "under_review", "resolved"]
+    team_note: str = Field(default="", max_length=2000)
+
+
+class TeamAccess(BaseModel):
+    is_enquiry_team: bool
 
 
 class HealthResponse(BaseModel):

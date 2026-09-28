@@ -38,6 +38,12 @@ class ClaimStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
+class ConcernStatus(str, enum.Enum):
+    RECEIVED = "received"
+    UNDER_REVIEW = "under_review"
+    RESOLVED = "resolved"
+
+
 def _enum_values(enum_cls: type[enum.Enum]) -> list[str]:
     """Store enum *values* in Postgres, not member names like LOST/OPEN."""
     return [member.value for member in enum_cls]
@@ -140,3 +146,35 @@ class ClaimRequest(Base):
     match: Mapped["Match"] = relationship(back_populates="claim")
     claimer: Mapped["User"] = relationship(back_populates="claims_made", foreign_keys=[claimer_id])
     finder: Mapped["User"] = relationship(back_populates="claims_received", foreign_keys=[finder_id])
+
+
+class Concern(Base):
+    """
+    A private safety/harassment/ragging report. Visible only to the reporter
+    (their own submission, status, and the team's note back to them) and to
+    the allowlisted enquiry-team accounts (app/services/enquiry_team.py) —
+    never to the reporter's peers, and never broadcast anywhere by the app
+    itself. Any public consequence (suspension notices, etc.) is a decision
+    the institution makes and communicates outside this system.
+    """
+
+    __tablename__ = "concerns"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    reporter_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    category: Mapped[str] = mapped_column(String(30))
+    description: Mapped[str] = mapped_column(Text)
+    location: Mapped[str] = mapped_column(String(80), default="")
+    status: Mapped[ConcernStatus] = mapped_column(
+        Enum(ConcernStatus, values_callable=_enum_values, name="concernstatus"),
+        default=ConcernStatus.RECEIVED,
+    )
+    # Human-written update from the enquiry team back to the reporter only —
+    # the app never generates or auto-sends this text.
+    team_note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    reporter: Mapped["User"] = relationship()

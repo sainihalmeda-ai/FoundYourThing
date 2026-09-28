@@ -181,6 +181,18 @@ export function validateReport(form: {
   return errors;
 }
 
+export function validateConcern(form: { category: string; description: string }): FieldErrors {
+  const errors: FieldErrors = {};
+  if (!form.category) errors.category = "Select what this is about.";
+  const desc = form.description.trim();
+  if (!desc) {
+    errors.description = "Describe what happened.";
+  } else if (desc.length < 20) {
+    errors.description = "Add a bit more detail (at least 20 characters) so the enquiry team has enough to go on.";
+  }
+  return errors;
+}
+
 export function hasErrors(errors: FieldErrors): boolean {
   return Object.keys(errors).length > 0;
 }

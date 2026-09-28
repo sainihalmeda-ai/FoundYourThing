@@ -28,6 +28,13 @@ CAMPUS_LOCATIONS = [
     "Other",
 ]
 
+CONCERN_CATEGORIES: dict[str, str] = {
+    "ragging": "Ragging",
+    "harassment": "Harassment",
+    "bullying": "Bullying",
+    "other": "Other safety concern",
+}
+
 # Privacy disclosure stages
 DISCLOSURE_PUBLIC = "public"       # VTU ID only
 DISCLOSURE_MATCH = "match"         # VTU ID + match score

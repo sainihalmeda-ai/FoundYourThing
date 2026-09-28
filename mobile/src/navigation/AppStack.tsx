@@ -11,10 +11,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { HomeButton } from "../components/HomeButton";
 import { AboutScreen } from "../screens/AboutScreen";
 import { ClaimsScreen } from "../screens/ClaimsScreen";
+import { ConcernDetailScreen } from "../screens/ConcernDetailScreen";
+import { EnquiryConcernDetailScreen } from "../screens/EnquiryConcernDetailScreen";
+import { EnquiryInboxScreen } from "../screens/EnquiryInboxScreen";
 import { FeedScreen } from "../screens/FeedScreen";
 import { HomeScreen } from "../screens/HomeScreen";
 import { ItemDetailScreen } from "../screens/ItemDetailScreen";
+import { ReportConcernScreen } from "../screens/ReportConcernScreen";
 import { ReportScreen } from "../screens/ReportScreen";
+import { SafetyScreen } from "../screens/SafetyScreen";
 import { COLORS, FONTS, RADIUS, SHADOW, TAB_BAR } from "../constants/config";
 import type { MainTabParamList, RootStackParamList } from "./types";
 
@@ -160,6 +165,27 @@ export function AppStack() {
       <Stack.Screen name="Feed" component={FeedScreen} options={{ title: "Campus feed" }} />
       <Stack.Screen name="Claims" component={ClaimsScreen} options={{ title: "Incoming requests" }} />
       <Stack.Screen name="About" component={AboutScreen} options={{ title: "About" }} />
+      <Stack.Screen name="Safety" component={SafetyScreen} options={{ title: "Report a concern" }} />
+      <Stack.Screen
+        name="ReportConcern"
+        component={ReportConcernScreen}
+        options={{ title: "Report a concern" }}
+      />
+      <Stack.Screen
+        name="ConcernDetail"
+        component={ConcernDetailScreen}
+        options={{ title: "Your report" }}
+      />
+      <Stack.Screen
+        name="EnquiryInbox"
+        component={EnquiryInboxScreen}
+        options={{ title: "Enquiry inbox" }}
+      />
+      <Stack.Screen
+        name="EnquiryConcernDetail"
+        component={EnquiryConcernDetailScreen}
+        options={{ title: "Report detail" }}
+      />
     </Stack.Navigator>
   );
 }

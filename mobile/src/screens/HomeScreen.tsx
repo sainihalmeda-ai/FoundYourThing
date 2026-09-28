@@ -110,6 +110,7 @@ export function HomeScreen() {
     onRequests: () => navigation.navigate("Claims"),
     onOpenApk: openFytApkPage,
     onAbout: () => navigation.navigate("About"),
+    onSafety: () => navigation.navigate("Safety"),
     onLogout: logout,
   };
 

@@ -50,6 +50,28 @@ export type Claim = {
   };
 };
 
+export type ConcernStatus = "received" | "under_review" | "resolved";
+
+export type Concern = {
+  id: number;
+  category: string;
+  category_label: string;
+  description: string;
+  location: string;
+  status: ConcernStatus;
+  team_note: string;
+  created_at: string;
+  updated_at: string;
+};
+
+/** Enquiry-team-only view — adds who filed it. */
+export type ConcernTeamView = Concern & {
+  reporter_vtu_id: string;
+  reporter_name?: string | null;
+  reporter_phone?: string | null;
+  reporter_department?: string | null;
+};
+
 export type ApiErrorKind =
   | "offline"
   | "timeout"

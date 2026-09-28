@@ -15,4 +15,9 @@ export type RootStackParamList = {
   ItemDetail: { itemId: number };
   Claims: undefined;
   About: undefined;
+  Safety: undefined;
+  ReportConcern: undefined;
+  ConcernDetail: { concernId: number };
+  EnquiryInbox: undefined;
+  EnquiryConcernDetail: { concernId: number };
 };
