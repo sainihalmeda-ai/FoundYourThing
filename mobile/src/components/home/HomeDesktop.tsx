@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, View, ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { resolveImageUrl } from "../../api/client";
@@ -6,6 +6,7 @@ import { Badge } from "../Ui";
 import { UserAvatarPlaceholder } from "../UserAvatarPlaceholder";
 import { PressScale } from "../PressScale";
 import { COLORS, FONTS, RADIUS, SHADOW } from "../../constants/config";
+import { pickAndUploadProfilePhoto } from "../../lib/profilePhoto";
 import { timeAgo } from "../../lib/timeAgo";
 import type { Item } from "../../types";
 import type { HomeStats } from "./types";
@@ -19,6 +20,9 @@ function ringStyle(stops: string): ViewStyle {
 export function HomeDesktop({
   firstName,
   vtuId,
+  photoUrl,
+  token,
+  onPhotoUploaded,
   stats,
   statsLoading,
   allItems,
@@ -31,6 +35,9 @@ export function HomeDesktop({
 }: {
   firstName: string;
   vtuId?: string;
+  photoUrl?: string | null;
+  token?: string | null;
+  onPhotoUploaded: () => void;
   stats: HomeStats;
   statsLoading: boolean;
   allItems: Item[];
@@ -41,6 +48,21 @@ export function HomeDesktop({
   onSafety: () => void;
   onOpenItem: (itemId: number) => void;
 }) {
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  const changePhoto = async () => {
+    if (!token || uploadingPhoto) return;
+    setUploadingPhoto(true);
+    try {
+      const updated = await pickAndUploadProfilePhoto(token);
+      if (updated) onPhotoUploaded();
+    } catch {
+      // A failed upload just leaves the existing photo/placeholder in place.
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const recoveredPct =
     stats && stats.items_reported > 0
       ? Math.round((stats.items_returned / stats.items_reported) * 100)
@@ -69,7 +91,13 @@ export function HomeDesktop({
       {/* Welcome + stat rings */}
       <View style={styles.topRow}>
         <View style={styles.welcomeCard}>
-          <UserAvatarPlaceholder initial={firstName.charAt(0).toUpperCase()} size={68} />
+          <UserAvatarPlaceholder
+            initial={firstName.charAt(0).toUpperCase()}
+            photoUri={photoUrl ? resolveImageUrl(photoUrl) : null}
+            size={68}
+            onPress={token ? changePhoto : undefined}
+            loading={uploadingPhoto}
+          />
           <View style={{ flex: 1, minWidth: 0 }}>
             <Text style={styles.welcomeEyebrow}>Welcome back</Text>
             <Text style={styles.welcomeName}>

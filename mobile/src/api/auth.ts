@@ -37,6 +37,16 @@ export async function fetchMe(token: string) {
   return apiRequest<User>("/api/auth/me", { token });
 }
 
+export async function uploadProfilePhoto(token: string, form: FormData) {
+  return apiRequest<User>("/api/auth/me/photo", {
+    method: "POST",
+    token,
+    body: form,
+    retries: 0,
+    timeoutMs: UPLOAD_TIMEOUT_MS,
+  });
+}
+
 export async function fetchMetadata(token: string) {
   return apiRequest<{
     categories: { id: string; label: string }[];

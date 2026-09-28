@@ -62,6 +62,10 @@ class User(Base):
     role: Mapped[str] = mapped_column(String(20), default="student")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    # Profile photo — same pattern as Item photos: bytes in Postgres survive
+    # Render's free-tier disk wipes; path doubles as the /api/media/ lookup key.
+    photo_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    photo_data: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
 
     items: Mapped[list["Item"]] = relationship(back_populates="user")
     claims_made: Mapped[list["ClaimRequest"]] = relationship(

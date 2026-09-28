@@ -84,6 +84,7 @@ class UserPublic(BaseModel):
     full_name: str | None = None
     phone: str | None = None
     role: str | None = None
+    photo_url: str | None = None
 
     model_config = {"from_attributes": True}
 

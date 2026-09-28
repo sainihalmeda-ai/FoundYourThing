@@ -23,7 +23,7 @@ import { RootStackParamList } from "../navigation/types";
 import type { Item } from "../types";
 
 export function HomeScreen() {
-  const { user, token, logout } = useAuth();
+  const { user, token, logout, refreshProfile } = useAuth();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const wide = width >= WIDE_BREAKPOINT;
@@ -133,6 +133,9 @@ export function HomeScreen() {
           <HomeDesktop
             firstName={firstName}
             vtuId={user?.vtu_id}
+            photoUrl={user?.photo_url}
+            token={token}
+            onPhotoUploaded={refreshProfile}
             stats={stats}
             statsLoading={!stats}
             allItems={allItems}

@@ -1,4 +1,4 @@
-"""Item photo storage — Postgres bytes (durable) + local disk + optional Supabase."""
+"""Photo storage (items + user profile photos) — Postgres bytes (durable) + local disk + optional Supabase."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models import Item
+from app.models import Item, User
 
 log = logging.getLogger(__name__)
 
@@ -42,7 +42,11 @@ def public_image_url(image_path: str) -> str:
 
 
 def save_item_photo(filename: str, content: bytes, content_type: str) -> None:
-    """Write to local disk; optionally mirror to Supabase Storage."""
+    """Write to local disk; optionally mirror to Supabase Storage.
+
+    Despite the name, this is generic byte storage keyed by filename — also
+    used for user profile photos (see routers/auth.py), not just items.
+    """
     path = local_upload_path(filename)
     path.write_bytes(content)
 
@@ -107,6 +111,15 @@ def media_response(filename: str, db: Session) -> Response:
         mime = mimetypes.guess_type(safe)[0] or "image/jpeg"
         return Response(
             content=bytes(item.image_data),
+            media_type=mime,
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+
+    user = db.query(User).filter(User.photo_path == safe).first()
+    if user and user.photo_data:
+        mime = mimetypes.guess_type(safe)[0] or "image/jpeg"
+        return Response(
+            content=bytes(user.photo_data),
             media_type=mime,
             headers={"Cache-Control": "public, max-age=86400"},
         )

@@ -1,6 +1,7 @@
-from datetime import datetime
+from pathlib import Path
+from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -15,8 +16,23 @@ from app.services.campus_id import (
     normalize_campus_id,
     role_for_campus_id,
 )
+from app.services.storage import public_image_url, save_item_photo
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+_PHOTO_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/jpg"}
+
+
+def _user_public(user: User, **overrides) -> UserPublic:
+    return UserPublic(
+        vtu_id=user.vtu_id,
+        department=user.department,
+        full_name=user.full_name,
+        phone=user.phone,
+        role=user.role,
+        photo_url=public_image_url(user.photo_path) if user.photo_path else None,
+        **overrides,
+    )
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
@@ -45,10 +61,7 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
     db.refresh(user)
 
     token = create_access_token(user.id)
-    return TokenResponse(
-        access_token=token,
-        user=UserPublic(vtu_id=user.vtu_id, department=user.department),
-    )
+    return TokenResponse(access_token=token, user=_user_public(user))
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -60,10 +73,7 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=401, detail="Invalid ID or password.")
 
     token = create_access_token(user.id)
-    return TokenResponse(
-        access_token=token,
-        user=UserPublic(vtu_id=user.vtu_id, department=user.department),
-    )
+    return TokenResponse(access_token=token, user=_user_public(user))
 
 
 @router.post("/token", response_model=TokenResponse, include_in_schema=False)
@@ -72,34 +82,45 @@ def login_form(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     if not user or not verify_password(form.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid ID or password.")
     token = create_access_token(user.id)
-    return TokenResponse(
-        access_token=token,
-        user=UserPublic(vtu_id=user.vtu_id, department=user.department),
-    )
+    return TokenResponse(access_token=token, user=_user_public(user))
 
 
 @router.post("/refresh", response_model=TokenResponse)
 def refresh(current_user: User = Depends(get_current_user)):
     """Extend the session by issuing a fresh access token."""
     token = create_access_token(current_user.id)
-    return TokenResponse(
-        access_token=token,
-        user=UserPublic(
-            vtu_id=current_user.vtu_id,
-            department=current_user.department,
-            full_name=current_user.full_name,
-            phone=current_user.phone,
-            role=current_user.role,
-        ),
-    )
+    return TokenResponse(access_token=token, user=_user_public(current_user))
 
 
 @router.get("/me", response_model=UserPublic)
 def me(current_user: User = Depends(get_current_user)):
-    return UserPublic(
-        vtu_id=current_user.vtu_id,
-        department=current_user.department,
-        full_name=current_user.full_name,
-        phone=current_user.phone,
-        role=current_user.role,
-    )
+    return _user_public(current_user)
+
+
+@router.post("/me/photo", response_model=UserPublic)
+async def upload_profile_photo(
+    photo: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if photo.content_type not in _PHOTO_CONTENT_TYPES:
+        raise HTTPException(status_code=400, detail="Upload a JPG, PNG, or WEBP photo.")
+
+    content = await photo.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Image must be under 5 MB.")
+
+    ext = Path(photo.filename or "photo.jpg").suffix.lower() or ".jpg"
+    filename = f"profile-{current_user.id}-{uuid4().hex}{ext}"
+    try:
+        save_item_photo(filename, content, photo.content_type or "image/jpeg")
+    except RuntimeError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+    current_user.photo_path = filename
+    current_user.photo_data = content
+    db.add(current_user)
+    db.commit()
+    db.refresh(current_user)
+
+    return _user_public(current_user)

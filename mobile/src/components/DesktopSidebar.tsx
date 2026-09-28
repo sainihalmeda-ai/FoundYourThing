@@ -1,8 +1,10 @@
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { resolveImageUrl } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { navigate } from "../navigation/navigationRef";
+import { UserAvatarPlaceholder } from "./UserAvatarPlaceholder";
 import { COLORS, FONTS } from "../constants/config";
 
 export type SidebarSection = "home" | "feed" | "claims" | "safety" | "about";
@@ -101,9 +103,11 @@ export function DesktopSidebar({
       <View style={styles.divider} />
 
       <View style={styles.userRow}>
-        <View style={styles.userAvatar}>
-          <Text style={styles.userAvatarText}>{initial}</Text>
-        </View>
+        <UserAvatarPlaceholder
+          initial={initial}
+          photoUri={user?.photo_url ? resolveImageUrl(user.photo_url) : null}
+          size={34}
+        />
         <View style={{ flex: 1, minWidth: 0 }}>
           <Text style={styles.userName} numberOfLines={1}>
             {firstName}
@@ -213,15 +217,6 @@ const styles = StyleSheet.create({
   badgeText: { color: "#fff", fontSize: 10, fontFamily: FONTS.sansBold },
   divider: { height: 1, backgroundColor: COLORS.divider, marginVertical: 12, marginHorizontal: 6 },
   userRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 8 },
-  userAvatar: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: COLORS.surfaceMuted,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  userAvatarText: { fontFamily: FONTS.displayMedium, fontSize: 13, color: COLORS.primary },
   userName: { fontFamily: FONTS.sansBold, fontSize: 12.5, color: COLORS.text },
   userId: { fontFamily: FONTS.sansMedium, fontSize: 10.5, color: "#98A2B3", marginTop: 1 },
 });

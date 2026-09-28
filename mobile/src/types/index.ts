@@ -4,6 +4,7 @@ export type User = {
   department?: string | null;
   phone?: string | null;
   role?: string | null;
+  photo_url?: string | null;
 };
 
 export type Item = {
