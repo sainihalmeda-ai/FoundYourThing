@@ -20,6 +20,7 @@ import { ItemDetailScreen } from "../screens/ItemDetailScreen";
 import { ReportConcernScreen } from "../screens/ReportConcernScreen";
 import { ReportScreen } from "../screens/ReportScreen";
 import { SafetyScreen } from "../screens/SafetyScreen";
+import { SectionChooserScreen } from "../screens/SectionChooserScreen";
 import { COLORS, FONTS, RADIUS, SHADOW, TAB_BAR } from "../constants/config";
 import type { MainTabParamList, RootStackParamList } from "./types";
 
@@ -136,6 +137,7 @@ function MainTabs() {
 export function AppStack() {
   return (
     <Stack.Navigator
+      initialRouteName="Chooser"
       screenOptions={{
         headerStyle: { backgroundColor: COLORS.background },
         headerShadowVisible: false,
@@ -154,6 +156,11 @@ export function AppStack() {
         animationDuration: 280,
       }}
     >
+      <Stack.Screen
+        name="Chooser"
+        component={SectionChooserScreen}
+        options={{ headerShown: false }}
+      />
       <Stack.Screen
         name="MainTabs"
         component={MainTabs}

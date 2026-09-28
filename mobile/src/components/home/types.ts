@@ -20,7 +20,6 @@ export type HomeVariantProps = {
   onRequests: () => void;
   onOpenApk: () => void;
   onAbout: () => void;
-  onSafety: () => void;
   onLogout: () => void;
 };
 

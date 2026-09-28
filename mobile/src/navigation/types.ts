@@ -8,6 +8,7 @@ export type RootStackParamList = {
   Login: { mode?: "login" | "register" } | undefined;
   Register: undefined;
   Download: undefined;
+  Chooser: undefined;
   MainTabs: undefined;
   Home: undefined;
   Report: { mode: "lost" | "found"; linkFoundId?: number; linkLostId?: number };

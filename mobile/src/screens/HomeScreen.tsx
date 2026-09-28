@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -110,7 +111,6 @@ export function HomeScreen() {
     onRequests: () => navigation.navigate("Claims"),
     onOpenApk: openFytApkPage,
     onAbout: () => navigation.navigate("About"),
-    onSafety: () => navigation.navigate("Safety"),
     onLogout: logout,
   };
 
@@ -126,6 +126,14 @@ export function HomeScreen() {
           ]}
         >
           <HomeLayoutSwitcher value={layout} onChange={handleLayoutChange} />
+          <Pressable
+            style={({ pressed }) => [styles.sectionBtn, pressed && styles.sectionBtnPressed]}
+            onPress={() => navigation.navigate("Safety")}
+            accessibilityRole="button"
+            accessibilityLabel="Switch to Campus Safety"
+          >
+            <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.accent} />
+          </Pressable>
         </View>
         <View style={{ flex: 1 }}>
           {layout === "grid" ? (
@@ -149,10 +157,25 @@ export function HomeScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
   switcherDock: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
     paddingHorizontal: 20,
     paddingBottom: 8,
     width: "100%",
     maxWidth: CONTENT_MAX_WIDTH,
     alignSelf: "center",
   },
+  sectionBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sectionBtnPressed: { opacity: 0.85 },
 });

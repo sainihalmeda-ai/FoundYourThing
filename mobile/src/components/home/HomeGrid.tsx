@@ -22,7 +22,6 @@ export function HomeGrid({
   onRequests,
   onOpenApk,
   onAbout,
-  onSafety,
   onLogout,
 }: HomeVariantProps) {
   const chips = [
@@ -131,7 +130,7 @@ export function HomeGrid({
         </Text>
       </Reveal>
 
-      <HomeUtilityFooter onOpenApk={onOpenApk} onAbout={onAbout} onSafety={onSafety} onLogout={onLogout} />
+      <HomeUtilityFooter onOpenApk={onOpenApk} onAbout={onAbout} onLogout={onLogout} />
     </ScrollView>
   );
 }
