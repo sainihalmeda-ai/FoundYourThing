@@ -86,6 +86,14 @@ export const SHADOW = {
  */
 export const CONTENT_MAX_WIDTH = 640;
 
+/**
+ * Below this, screens get the phone-first single-column layout (same
+ * threshold FeedScreen/LoginScreen already used for their own "wide"
+ * split treatment). At or above it, Home switches to the sidebar +
+ * dashboard desktop layout instead of stretching the phone one.
+ */
+export const WIDE_BREAKPOINT = 900;
+
 /** Floating bottom nav metrics — keep scroll content clear of the bar. */
 export const TAB_BAR = {
   height: 68,

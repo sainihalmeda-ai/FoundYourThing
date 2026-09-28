@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import {
   BottomTabBar,
@@ -21,7 +21,7 @@ import { ReportConcernScreen } from "../screens/ReportConcernScreen";
 import { ReportScreen } from "../screens/ReportScreen";
 import { SafetyScreen } from "../screens/SafetyScreen";
 import { SectionChooserScreen } from "../screens/SectionChooserScreen";
-import { COLORS, FONTS, RADIUS, SHADOW, TAB_BAR } from "../constants/config";
+import { COLORS, FONTS, RADIUS, SHADOW, TAB_BAR, WIDE_BREAKPOINT } from "../constants/config";
 import type { MainTabParamList, RootStackParamList } from "./types";
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
@@ -71,9 +71,15 @@ function FloatingTabBar(props: BottomTabBarProps) {
 }
 
 function MainTabs() {
+  const { width } = useWindowDimensions();
+  // The desktop dashboard (HomeScreen's wide layout) brings its own
+  // sidebar nav that already covers Home/Browse/Requests — a bottom
+  // tab bar under it would just be a second, redundant nav surface.
+  const wide = width >= WIDE_BREAKPOINT;
+
   return (
     <Tab.Navigator
-      tabBar={(props) => <FloatingTabBar {...props} />}
+      tabBar={(props) => (wide ? null : <FloatingTabBar {...props} />)}
       screenOptions={{
         headerShown: true,
         headerStyle: { backgroundColor: COLORS.background },
