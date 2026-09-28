@@ -157,7 +157,7 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 ```
 
 **Windows (PowerShell):**
@@ -166,8 +166,8 @@ cd backend
 .\start.ps1
 ```
 
-API docs: **http://127.0.0.1:8000/docs**  
-Health check: **http://127.0.0.1:8000/api/health**
+API docs: **http://127.0.0.1:8001/docs**  
+Health check: **http://127.0.0.1:8001/api/health**
 
 ### 3. Start the mobile app
 
@@ -176,7 +176,7 @@ Health check: **http://127.0.0.1:8000/api/health**
 cd mobile
 npm install
 cp .env.example .env
-# Set EXPO_PUBLIC_API_URL=http://127.0.0.1:8000 in .env
+# Set EXPO_PUBLIC_API_URL=http://127.0.0.1:8001 in .env
 npm run web
 ```
 
@@ -191,9 +191,9 @@ Set `EXPO_PUBLIC_API_URL` in `mobile/.env`:
 
 | Environment | API URL |
 |-------------|---------|
-| PC browser | `http://127.0.0.1:8000` |
-| Android emulator | `http://10.0.2.2:8000` |
-| Physical phone (same Wi‑Fi) | `http://YOUR_PC_LAN_IP:8000` |
+| PC browser | `http://127.0.0.1:8001` |
+| Android emulator | `http://10.0.2.2:8001` |
+| Physical phone (same Wi‑Fi) | `http://YOUR_PC_LAN_IP:8001` |
 
 See [docs/CONNECTION.md](docs/CONNECTION.md) for troubleshooting.
 

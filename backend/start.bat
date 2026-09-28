@@ -9,4 +9,4 @@ if not exist venv (
 )
 if not exist .env copy .env.example .env
 if not exist uploads mkdir uploads
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8001

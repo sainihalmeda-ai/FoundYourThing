@@ -30,7 +30,7 @@ flowchart TD
 Set in `mobile/.env`:
 
 ```env
-EXPO_PUBLIC_API_URL=http://192.168.1.42:8000
+EXPO_PUBLIC_API_URL=http://192.168.1.42:8001
 ```
 
 Restart Expo after changing `.env` (`npm start` again).
@@ -44,7 +44,7 @@ Restart Expo after changing `.env` (`npm start` again).
 Use the special alias to reach the host machine:
 
 ```env
-EXPO_PUBLIC_API_URL=http://10.0.2.2:8000
+EXPO_PUBLIC_API_URL=http://10.0.2.2:8001
 ```
 
 ## Request behaviour
@@ -69,15 +69,15 @@ The server must bind to all interfaces so your phone can connect:
 ```powershell
 cd backend
 .\venv\Scripts\activate
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8001
 ```
 
 Windows Firewall may prompt you — allow access on private networks.
 
 ## Test checklist
 
-1. Open http://127.0.0.1:8000/api/health in your PC browser → `{"status":"ok"}`
-2. Open http://YOUR_LAN_IP:8000/api/health on your phone browser → same response
+1. Open http://127.0.0.1:8001/api/health in your PC browser → `{"status":"ok"}`
+2. Open http://YOUR_LAN_IP:8001/api/health on your phone browser → same response
 3. Open the app → no red banner
 4. Register / login works
 5. Upload a lost item with photo
@@ -88,7 +88,7 @@ Windows Firewall may prompt you — allow access on private networks.
 |---------|-----|
 | Red "Server unavailable" banner | Start backend; check `EXPO_PUBLIC_API_URL`; use LAN IP on phone |
 | Login works on web, not phone | Phone URL must use PC IP, not localhost |
-| Upload hangs then times out | Firewall blocking port 8000; allow Python |
+| Upload hangs then times out | Firewall blocking port 8001; allow Python |
 | Session expired | Log in again (token stored in SecureStore) |
 | Image not showing | Ensure `image_url` resolves via same API base URL |
 

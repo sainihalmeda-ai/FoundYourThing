@@ -100,7 +100,8 @@ export function tabBarScrollPadding(safeBottom = 0): number {
   return TAB_BAR.height + TAB_BAR.bottomGap + TAB_BAR.contentGap + Math.max(safeBottom, 0);
 }
 
-const API_PORT = 8000;
+// 8000 is taken by another local service on the primary dev machine.
+const API_PORT = 8001;
 
 /**
  * In development the backend runs on the same machine as the dev server, so
@@ -131,7 +132,7 @@ const resolvedApiBaseUrl =
   (__DEV__ ? devServerApiUrl() : null) ??
   process.env.EXPO_PUBLIC_API_URL ??
   (typeof window !== "undefined" && window.location?.hostname
-    ? `${window.location.protocol}//${window.location.hostname}:8000`
+    ? `${window.location.protocol}//${window.location.hostname}:${API_PORT}`
     : null) ??
   PRODUCTION_API_URL;
 

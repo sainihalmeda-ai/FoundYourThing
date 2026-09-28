@@ -10,5 +10,5 @@ export CI=1
 
 # Keep one foreground supervisor so Cursor's start process stays alive.
 exec npx --yes concurrently -k -n api,web -c blue,magenta \
-  "backend/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000" \
+  "backend/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8001" \
   "npm run web --prefix mobile -- --port 8081"

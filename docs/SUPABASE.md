@@ -48,7 +48,7 @@ On startup, `Base.metadata.create_all` creates `users`, `items`, `matches`, and 
 
 ## 4. Verify
 
-- API health: http://127.0.0.1:8000/api/health
+- API health: http://127.0.0.1:8001/api/health
 - Supabase → **Table Editor** should show the four tables after the first successful start
 - Register a test user with a `VTU…` or `TTS…` ID
 
