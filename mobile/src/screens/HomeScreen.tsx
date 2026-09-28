@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
+import { StyleSheet, View, useWindowDimensions } from "react-native";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -9,6 +8,7 @@ import { ConnectionBanner } from "../components/ConnectionBanner";
 import { ConnectionGate } from "../components/ConnectionGate";
 import { DesktopSidebar } from "../components/DesktopSidebar";
 import { DaylightBackdrop } from "../components/SpatialBackdrop";
+import { SectionStepper } from "../components/SectionStepper";
 import { HomeLayoutSwitcher } from "../components/home/HomeLayoutSwitcher";
 import { HomePortal } from "../components/home/HomePortal";
 import { HomeGrid } from "../components/home/HomeGrid";
@@ -160,14 +160,11 @@ export function HomeScreen() {
           ]}
         >
           <HomeLayoutSwitcher value={layout} onChange={handleLayoutChange} />
-          <Pressable
-            style={({ pressed }) => [styles.sectionBtn, pressed && styles.sectionBtnPressed]}
+          <SectionStepper
+            direction="forward"
+            label="Campus Safety"
             onPress={() => navigation.navigate("Safety")}
-            accessibilityRole="button"
-            accessibilityLabel="Switch to Campus Safety"
-          >
-            <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.accent} />
-          </Pressable>
+          />
         </View>
         <View style={{ flex: 1 }}>
           {layout === "grid" ? (
@@ -202,15 +199,4 @@ const styles = StyleSheet.create({
     maxWidth: CONTENT_MAX_WIDTH,
     alignSelf: "center",
   },
-  sectionBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  sectionBtnPressed: { opacity: 0.85 },
 });

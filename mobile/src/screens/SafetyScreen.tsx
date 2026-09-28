@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -7,12 +7,15 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchConcernTeamAccess, fetchMyConcerns } from "../api/auth";
 import { ConnectionBanner } from "../components/ConnectionBanner";
 import { ConnectionGate } from "../components/ConnectionGate";
+import { DesktopSidebar } from "../components/DesktopSidebar";
 import { HomeButton } from "../components/HomeButton";
 import { LoadingOverlay } from "../components/LoadingOverlay";
+import { SectionStepper } from "../components/SectionStepper";
 import { Badge } from "../components/Ui";
 import { EmptyState, ErrorState } from "../components/states";
 import { useAuth } from "../context/AuthContext";
-import { COLORS, CONTENT_MAX_WIDTH, FONTS, RADIUS, SHADOW } from "../constants/config";
+import { COLORS, CONTENT_MAX_WIDTH, FONTS, RADIUS, SHADOW, WIDE_BREAKPOINT } from "../constants/config";
+import { navigate as navigateGlobal } from "../navigation/navigationRef";
 import { RootStackParamList } from "../navigation/types";
 import type { Concern, ConcernStatus } from "../types";
 
@@ -31,6 +34,8 @@ const STATUS_LABEL: Record<ConcernStatus, string> = {
 export function SafetyScreen() {
   const { token } = useAuth();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const wide = width >= WIDE_BREAKPOINT;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [concerns, setConcerns] = useState<Concern[]>([]);
   const [isTeam, setIsTeam] = useState(false);
@@ -66,23 +71,37 @@ export function SafetyScreen() {
   }
   if (error) return <ErrorState error={error} onRetry={load} />;
 
-  return (
-    <ConnectionGate>
-      <View style={styles.root}>
-        <ConnectionBanner />
-        <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) + 8 }]}>
-          <View style={styles.headerTop}>
-            <View style={styles.headerText}>
-              <Text style={styles.title} numberOfLines={2}>
-                Report a concern
-              </Text>
-              <Text style={styles.subtitle}>Private — only you and the enquiry team can see this</Text>
-            </View>
-            <HomeButton />
+  const content = (
+    <>
+      <ConnectionBanner />
+      <View style={[styles.header, { paddingTop: wide ? 8 : Math.max(insets.top, 12) + 8 }]}>
+        <View style={styles.headerTop}>
+          <View style={styles.headerText}>
+            <Text style={styles.title} numberOfLines={2}>
+              Report a concern
+            </Text>
+            <Text style={styles.subtitle}>Private — only you and the enquiry team can see this</Text>
           </View>
+          {wide ? (
+            <SectionStepper
+              direction="back"
+              label="Lost & Found"
+              onPress={() => navigateGlobal("MainTabs", { screen: "HomeTab" })}
+            />
+          ) : (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <SectionStepper
+                direction="back"
+                label="Lost & Found"
+                onPress={() => navigateGlobal("MainTabs", { screen: "HomeTab" })}
+              />
+              <HomeButton />
+            </View>
+          )}
         </View>
+      </View>
 
-        <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
           <View style={styles.infoCard}>
             <View style={styles.infoHeader}>
               <Ionicons name="shield-checkmark" size={16} color={COLORS.accent} />
@@ -149,14 +168,27 @@ export function SafetyScreen() {
               </Pressable>
             ))
           )}
-        </ScrollView>
-      </View>
+      </ScrollView>
+    </>
+  );
+
+  return (
+    <ConnectionGate>
+      {wide ? (
+        <View style={styles.desktopRoot}>
+          <DesktopSidebar active="safety" />
+          <View style={{ flex: 1 }}>{content}</View>
+        </View>
+      ) : (
+        <View style={styles.root}>{content}</View>
+      )}
     </ConnectionGate>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
+  desktopRoot: { flex: 1, flexDirection: "row", backgroundColor: COLORS.background },
   header: { paddingHorizontal: 20, paddingBottom: 10 },
   headerTop: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 },
   headerText: { flex: 1, minWidth: 0, paddingRight: 4 },
