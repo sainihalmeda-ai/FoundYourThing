@@ -44,6 +44,12 @@ class ConcernStatus(str, enum.Enum):
     RESOLVED = "resolved"
 
 
+class HostelComplaintStatus(str, enum.Enum):
+    RECEIVED = "received"
+    IN_PROGRESS = "in_progress"
+    RESOLVED = "resolved"
+
+
 def _enum_values(enum_cls: type[enum.Enum]) -> list[str]:
     """Store enum *values* in Postgres, not member names like LOST/OPEN."""
     return [member.value for member in enum_cls]
@@ -176,6 +182,40 @@ class Concern(Base):
     # Human-written update from the enquiry team back to the reporter only —
     # the app never generates or auto-sends this text.
     team_note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    reporter: Mapped["User"] = relationship()
+
+
+class HostelComplaint(Base):
+    """
+    A hostel maintenance/food complaint (plumbing, spoiled food, etc.).
+    Visible to the student who filed it and to the allowlisted hostel staff
+    (app/services/hostel_staff.py) — not to other students.
+    """
+
+    __tablename__ = "hostel_complaints"
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    reporter_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    hostel: Mapped[str] = mapped_column(String(40), index=True)
+    block: Mapped[str] = mapped_column(String(20))
+    room: Mapped[str] = mapped_column(String(20), default="")
+    category: Mapped[str] = mapped_column(String(30))
+    description: Mapped[str] = mapped_column(Text)
+    # Photo evidence — required. Bytes in Postgres survive Render disk wipes;
+    # path doubles as the /api/media/ lookup key (unguessable uuid name).
+    attachment_path: Mapped[str] = mapped_column(String(255))
+    attachment_data: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    status: Mapped[HostelComplaintStatus] = mapped_column(
+        Enum(HostelComplaintStatus, values_callable=_enum_values, name="hostelcomplaintstatus"),
+        default=HostelComplaintStatus.RECEIVED,
+    )
+    # Written by hostel staff back to the student.
+    staff_note: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow

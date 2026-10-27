@@ -35,6 +35,10 @@ services:
       # nobody (not even staff) can see reports until real people are named.
       - key: ENQUIRY_TEAM_VTU_IDS
         sync: false
+      # Comma-separated VTU/TTS IDs of hostel staff who can see and update
+      # every hostel complaint. Set manually in the dashboard.
+      - key: HOSTEL_STAFF_VTU_IDS
+        sync: false
 
   - type: web
     name: foundyourthing-web

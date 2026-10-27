@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     # team's IDs are set here or in the host env — nobody can see reports
     # until this is configured.
     enquiry_team_vtu_ids: str = ""
+    # Comma-separated VTU/TTS IDs of hostel staff (wardens, hostel office)
+    # who can see and update every hostel complaint
+    # (app/services/hostel_staff.py). Empty means only the student who filed
+    # a complaint can see it.
+    hostel_staff_vtu_ids: str = ""
 
     class Config:
         env_file = ".env"

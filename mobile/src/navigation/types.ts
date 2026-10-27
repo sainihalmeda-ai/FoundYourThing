@@ -22,4 +22,8 @@ export type RootStackParamList = {
   ConcernDetail: { concernId: number };
   EnquiryInbox: undefined;
   EnquiryConcernDetail: { concernId: number };
+  Hostel: undefined;
+  HostelComplaintNew: undefined;
+  HostelComplaintDetail: { complaintId: number };
+  HostelInbox: undefined;
 };
