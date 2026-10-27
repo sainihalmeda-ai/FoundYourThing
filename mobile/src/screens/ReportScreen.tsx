@@ -74,7 +74,7 @@ export function ReportScreen({ route, navigation }: Props) {
   /** Only native builds get a real camera app; the web uses the file dialog. */
   const hasCamera = Platform.OS !== "web";
   const cameraOnly = liveOnly && hasCamera;
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { canUseApi } = useConnection();
   const [loadingMeta, setLoadingMeta] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -559,11 +559,11 @@ export function ReportScreen({ route, navigation }: Props) {
   if (wide) {
     // Same thresholds as validateReport, so the checklist and the submit agree.
     const checks = [
-      { label: "Photo added", done: Boolean(photo) },
-      { label: "Category chosen", done: Boolean(category) },
-      { label: "Short title", done: title.trim().length >= 3 },
-      { label: "Details", done: description.trim().length >= 8 },
-      { label: "Location", done: Boolean(location) },
+      { label: "Photo", done: Boolean(photo), hint: "add one clear photo" },
+      { label: "Category", done: Boolean(category), hint: "pick what it is" },
+      { label: "Short title", done: title.trim().length >= 3, hint: "at least 3 characters" },
+      { label: "Details", done: description.trim().length >= 8, hint: "at least 8 characters" },
+      { label: "Location", done: Boolean(location), hint: "pick a place" },
     ];
     const canSwitchMode = !linkingFound && !linkingLost;
 
@@ -641,16 +641,12 @@ export function ReportScreen({ route, navigation }: Props) {
                 title={title}
                 categoryLabel={categories.find((c) => c.id === category)?.label ?? ""}
                 location={location}
+                description={description}
+                reporterVtu={user?.vtu_id}
                 isUrgent={isUrgent}
+                onUrgentChange={mode === "lost" ? setIsUrgent : undefined}
                 checks={checks}
               />
-              {urgentSwitch}
-              <View style={styles.privacyRow}>
-                <Ionicons name="lock-closed-outline" size={13} color={COLORS.textMuted} />
-                <Text style={styles.privacyText}>
-                  Only your VTU ID is public. Your phone is never shared without your OK.
-                </Text>
-              </View>
               {submitBlock}
             </View>
           </View>
@@ -738,14 +734,6 @@ const styles = StyleSheet.create({
   tipRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 },
   tipText: { flex: 1, fontFamily: FONTS.sans, fontSize: 11.5, color: COLORS.textMuted },
   photoDesk: { height: 180 },
-  privacyRow: { flexDirection: "row", alignItems: "flex-start", gap: 6, paddingHorizontal: 2 },
-  privacyText: {
-    flex: 1,
-    fontFamily: FONTS.sans,
-    fontSize: 11.5,
-    lineHeight: 16,
-    color: COLORS.textMuted,
-  },
   foundRef: {
     marginBottom: 14,
     padding: 14,
