@@ -56,7 +56,10 @@ export type Claim = {
   counterparty: User;
   match: {
     id: number;
+    /** Percentages (0–100). Overall blends photo 85% + text 15%. */
     combined_score: number;
+    image_score: number;
+    text_score: number;
     lost_item: Item;
     found_item: Item;
   };

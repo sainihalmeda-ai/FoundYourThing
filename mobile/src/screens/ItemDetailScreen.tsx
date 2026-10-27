@@ -24,13 +24,12 @@ import { ConnectionGate } from "../components/ConnectionGate";
 import { DesktopCard, DesktopPage } from "../components/DesktopPage";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingOverlay } from "../components/LoadingOverlay";
-import { MATCH_TONE_COLORS, MatchScore } from "../components/MatchScore";
+import { MatchAnalyzer } from "../components/MatchAnalyzer";
 import { PhotoView } from "../components/PhotoView";
 import { SidebarShell } from "../components/SidebarShell";
 import { AppButton, Badge } from "../components/Ui";
 import { EmptyState, SuccessState } from "../components/states";
 import { useAuth } from "../context/AuthContext";
-import { matchConfidence } from "../lib/matchConfidence";
 import { timeAgo } from "../lib/timeAgo";
 import { RootStackParamList } from "../navigation/types";
 import {
@@ -315,31 +314,26 @@ export function ItemDetailScreen({ route, navigation }: Props) {
         const showResolve = match.claim_status === "accepted" && Boolean(match.claim_id);
         const isDone = match.claim_status === "done";
         const phoneOk = Boolean(match.counterparty.phone) && !isDone && !itemReturned;
-        const palette = MATCH_TONE_COLORS[matchConfidence(match.combined_score).tone];
 
         return (
           <View key={match.id} style={styles.matchCard}>
-            <View style={styles.scoreRow}>
-              <View
-                style={[
-                  styles.scoreRing,
-                  { backgroundColor: palette.background, borderColor: palette.text },
-                ]}
-              >
-                <Text style={[styles.scoreNum, { color: palette.text }]}>
-                  {Math.round(match.combined_score)}
-                </Text>
-                <Text style={[styles.scorePct, { color: palette.text }]}>%</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.matchTitle}>{match.counterparty_item.title}</Text>
-                <Text style={styles.meta}>Other party · {match.counterparty.vtu_id}</Text>
-                {match.counterparty.full_name ? (
-                  <Text style={styles.meta}>Name · {match.counterparty.full_name}</Text>
-                ) : null}
-              </View>
+            <View style={styles.matchHead}>
+              <Text style={styles.matchTitle}>{match.counterparty_item.title}</Text>
+              <Text style={styles.meta}>
+                Other party · {match.counterparty.vtu_id}
+                {match.counterparty.full_name ? ` · ${match.counterparty.full_name}` : ""}
+              </Text>
             </View>
-            <MatchScore percent={match.combined_score} />
+            <MatchAnalyzer
+              leftUri={resolveImageUrl(item.image_url)}
+              leftLabel="This item"
+              rightUri={resolveImageUrl(match.counterparty_item.image_url)}
+              rightLabel={item.item_type === "lost" ? "Found item" : "Lost item"}
+              imageScore={match.image_score}
+              textScore={match.text_score}
+              combinedScore={match.combined_score}
+              photoHeight={wide ? 150 : 130}
+            />
 
             {phoneOk ? (
               <Pressable
@@ -689,29 +683,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  scoreRow: { flexDirection: "row", gap: 12, alignItems: "center" },
-  scoreRing: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    borderWidth: 3,
-    borderColor: COLORS.accent,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(0,156,165,0.08)",
-  },
-  scoreNum: {
-    fontFamily: FONTS.display,
-    fontSize: 18,
-    color: COLORS.primary,
-    lineHeight: 20,
-  },
-  scorePct: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 10,
-    color: COLORS.accent,
-    marginTop: -2,
-  },
+  matchHead: { marginBottom: 10 },
   matchTitle: {
     fontFamily: FONTS.sansBold,
     fontSize: 15,
