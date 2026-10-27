@@ -233,30 +233,21 @@ export function AppStack() {
         component={EnquiryConcernDetailScreen}
         options={sidebarPage("Report detail")}
       />
-      <Stack.Screen
-        name="Hostel"
-        component={HostelScreen}
-        // A sidebar page on desktop, same as Safety above.
-        options={{
-          title: "Hostel complaints",
-          headerShown: !wide,
-          animation: wide ? "none" : "slide_from_right",
-        }}
-      />
+      <Stack.Screen name="Hostel" component={HostelScreen} options={sidebarPage("Hostel complaints")} />
       <Stack.Screen
         name="HostelComplaintNew"
         component={HostelComplaintFormScreen}
-        options={{ title: "New complaint" }}
+        options={sidebarPage("New complaint")}
       />
       <Stack.Screen
         name="HostelComplaintDetail"
         component={HostelComplaintDetailScreen}
-        options={{ title: "Complaint" }}
+        options={sidebarPage("Complaint")}
       />
       <Stack.Screen
         name="HostelInbox"
         component={HostelInboxScreen}
-        options={{ title: "Hostel office inbox" }}
+        options={sidebarPage("Hostel office inbox")}
       />
     </Stack.Navigator>
   );

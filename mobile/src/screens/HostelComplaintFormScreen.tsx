@@ -1,11 +1,22 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { createHostelComplaint, fetchHostelOptions } from "../api/hostel";
 import { ConnectionBanner } from "../components/ConnectionBanner";
 import { ConnectionGate } from "../components/ConnectionGate";
+import { DesktopCard, DesktopPage } from "../components/DesktopPage";
+import { SidebarShell } from "../components/SidebarShell";
+import { StepCard } from "../components/report/ReportDesktopParts";
 import { KeyboardAwareScrollView } from "../components/Keyboard";
 import { LoadingOverlay } from "../components/LoadingOverlay";
 import { PhotoView } from "../components/PhotoView";
@@ -18,7 +29,7 @@ import { complaintTextProblem, countWords } from "../lib/complaintText";
 import { appendImageToFormData } from "../lib/formData";
 import { FieldErrors, hasErrors } from "../lib/validation";
 import { RootStackParamList } from "../navigation/types";
-import { COLORS, FONTS, RADIUS } from "../constants/config";
+import { COLORS, FONTS, RADIUS, WIDE_BREAKPOINT } from "../constants/config";
 import { HOSTEL_GROUPS } from "../constants/hostel";
 import { ApiError, HostelComplaintOptions } from "../types";
 
@@ -42,6 +53,8 @@ export function HostelComplaintFormScreen({ navigation }: Props) {
   const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const { width } = useWindowDimensions();
+  const wide = width >= WIDE_BREAKPOINT;
 
   const loadOptions = useCallback(async () => {
     if (!token) return;
@@ -60,10 +73,18 @@ export function HostelComplaintFormScreen({ navigation }: Props) {
   const clearError = (key: string) => setFieldErrors((prev) => ({ ...prev, [key]: "" }));
 
   if (loadError) return <ErrorState error={loadError} onRetry={loadOptions} />;
-  if (!options) return <LoadingOverlay label="Loading" hint="Fetching hostels and blocks…" />;
+  if (!options) {
+    return wide ? (
+      <SidebarShell active="hostel" loading>
+        {null}
+      </SidebarShell>
+    ) : (
+      <LoadingOverlay label="Loading" hint="Fetching hostels and blocks…" />
+    );
+  }
 
   if (submitted) {
-    return (
+    const success = (
       <SuccessState
         title="Complaint registered"
         message="The hostel office has your complaint and photo. You can follow its status under Your complaints."
@@ -71,6 +92,7 @@ export function HostelComplaintFormScreen({ navigation }: Props) {
         onAction={() => navigation.replace("Hostel")}
       />
     );
+    return wide ? <SidebarShell active="hostel">{success}</SidebarShell> : success;
   }
 
   const { min_words: minWords, max_words: maxWords } = options;
@@ -150,6 +172,258 @@ export function HostelComplaintFormScreen({ navigation }: Props) {
     }
   };
 
+  const whereFields = (
+    <>
+      <Text style={styles.label}>Hostel</Text>
+      {HOSTEL_GROUPS.map((group) => {
+        const hostels = options.hostels.filter((h) => h.group === group.key);
+        if (hostels.length === 0) return null;
+        return (
+          <View key={group.key}>
+            <Text style={styles.groupLabel}>{group.label}</Text>
+            <View style={styles.chips}>
+              {hostels.map((h) => (
+                <Chip
+                  key={h.id}
+                  label={h.label}
+                  active={hostel === h.id}
+                  onPress={() => {
+                    setHostel(h.id);
+                    // A block letter from another hostel isn't valid here.
+                    if (!h.blocks.includes(block)) setBlock("");
+                    clearError("hostel");
+                    clearError("block");
+                  }}
+                />
+              ))}
+            </View>
+          </View>
+        );
+      })}
+      <ValidationMessage message={fieldErrors.hostel} field />
+
+      {/* Blocks appear once a hostel is picked, and only if it has any listed. */}
+      {selectedHostel && selectedHostel.blocks.length > 0 ? (
+        <>
+          <Text style={styles.label}>Block in {selectedHostel.label}</Text>
+          <View style={styles.chips}>
+            {selectedHostel.blocks.map((b) => (
+              <Chip
+                key={b}
+                label={`Block ${b}`}
+                active={block === b}
+                onPress={() => {
+                  setBlock(b);
+                  clearError("block");
+                }}
+              />
+            ))}
+          </View>
+          <ValidationMessage message={fieldErrors.block} field />
+        </>
+      ) : null}
+
+      <Field
+        label="Room number (optional)"
+        value={room}
+        onChangeText={setRoom}
+        placeholder="e.g. 214, or Mess hall"
+        autoCapitalize="sentences"
+      />
+    </>
+  );
+
+  const problemFields = (
+    <>
+      <Text style={styles.label}>What is the problem?</Text>
+      <View style={styles.chips}>
+        {options.categories.map((c) => (
+          <Chip
+            key={c.id}
+            label={c.label}
+            active={category === c.id}
+            onPress={() => {
+              setCategory(c.id);
+              clearError("category");
+            }}
+          />
+        ))}
+      </View>
+      <ValidationMessage message={fieldErrors.category} field />
+
+      <Text style={styles.label}>Describe the problem</Text>
+      <Text style={styles.muted}>
+        At least {minWords} words: what is wrong, exactly where, since when, who you have
+        already told, and how it affects students.
+      </Text>
+      <TextInput
+        style={[styles.textarea, fieldErrors.description ? styles.textareaError : null]}
+        value={description}
+        onChangeText={(text) => {
+          setDescription(text);
+          clearError("description");
+        }}
+        placeholder="For the last week the tap in the second-floor bathroom of Block B has been leaking…"
+        placeholderTextColor={COLORS.textMuted}
+        multiline
+        textAlignVertical="top"
+        autoCapitalize="sentences"
+      />
+      <View style={styles.counterRow}>
+        <View style={styles.counterTrack}>
+          <View
+            style={[
+              styles.counterFill,
+              { width: `${Math.min(100, (words / minWords) * 100)}%` },
+              enoughWords && styles.counterFillDone,
+            ]}
+          />
+        </View>
+        <Text style={[styles.counterText, enoughWords && styles.counterTextDone]}>
+          {words} / {minWords} words
+        </Text>
+      </View>
+      <ValidationMessage message={fieldErrors.description || textProblem} field />
+    </>
+  );
+
+  const photoField = (
+    <>
+      {/* On desktop the step card's title already says this. */}
+      {wide ? null : <Text style={styles.label}>Photo of the problem</Text>}
+      {photo ? (
+        <View>
+          <PhotoView key={photoKey} uri={photo.uri} style={styles.photoPreview} />
+          <View style={styles.photoActions}>
+            <Pressable onPress={pickFromGallery} style={styles.linkBtn}>
+              <Ionicons name="swap-horizontal" size={14} color={COLORS.primary} />
+              <Text style={styles.linkText}>Change photo</Text>
+            </Pressable>
+            <Pressable onPress={() => setPhoto(null)} style={styles.linkBtn}>
+              <Ionicons name="trash-outline" size={14} color={COLORS.accent} />
+              <Text style={[styles.linkText, { color: COLORS.accent }]}>Remove</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.photoRow}>
+          <Pressable
+            onPress={pickFromGallery}
+            style={({ pressed }) => [
+              styles.photoBox,
+              fieldErrors.photo ? styles.photoBoxError : null,
+              pressed && styles.pressed,
+            ]}
+          >
+            <Ionicons name="image-outline" size={24} color={COLORS.primary} />
+            <Text style={styles.photoHint}>
+              {Platform.OS === "web" ? "Choose a photo" : "Gallery"}
+            </Text>
+          </Pressable>
+          {/* A browser's file dialog already offers the camera on phones. */}
+          {Platform.OS !== "web" ? (
+            <Pressable
+              onPress={takePhoto}
+              style={({ pressed }) => [
+                styles.photoBox,
+                fieldErrors.photo ? styles.photoBoxError : null,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Ionicons name="camera-outline" size={24} color={COLORS.primary} />
+              <Text style={styles.photoHint}>Camera</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      )}
+      <ValidationMessage message={fieldErrors.photo} field />
+    </>
+  );
+
+  const submitBlock = (
+    <>
+      <ValidationMessage message={formError} />
+
+      <AppButton
+        label={submitting ? "Sending…" : "Register complaint"}
+        onPress={submit}
+        disabled={submitting}
+        loading={submitting}
+      />
+    </>
+  );
+
+  if (wide) {
+    const summary: { label: string; value: string; done: boolean }[] = [
+      {
+        label: "Where",
+        value: selectedHostel
+          ? [selectedHostel.label, block && `Block ${block}`, room.trim() && `Room ${room.trim()}`]
+              .filter(Boolean)
+              .join(" · ")
+          : "Choose a hostel",
+        done: Boolean(selectedHostel) && (!selectedHostel?.blocks.length || Boolean(block)),
+      },
+      {
+        label: "Problem",
+        value: options.categories.find((c) => c.id === category)?.label ?? "Choose a category",
+        done: Boolean(category),
+      },
+      {
+        label: "Description",
+        value: `${words} / ${minWords} words`,
+        done: enoughWords && !textProblem,
+      },
+      { label: "Photo", value: photo ? "Attached" : "Not attached yet", done: Boolean(photo) },
+    ];
+
+    return (
+      <DesktopPage
+        active="hostel"
+        eyebrow="Hostel · New complaint"
+        title="Register a complaint"
+        subtitle="Goes to the hostel office. Other students can't see it."
+        sideWidth={360}
+        main={
+          <>
+            <StepCard step={1} title="Where is the problem?" icon="business-outline" done={summary[0].done}>
+              {whereFields}
+            </StepCard>
+            <StepCard step={2} title="What is wrong?" icon="construct-outline" done={summary[1].done && summary[2].done}>
+              {problemFields}
+            </StepCard>
+          </>
+        }
+        side={
+          <>
+            <StepCard step={3} title="Photo of the problem" icon="camera-outline" done={summary[3].done}>
+              {photoField}
+            </StepCard>
+            <DesktopCard>
+              <Text style={styles.summaryTitle}>Your complaint</Text>
+              {summary.map((row) => (
+                <View key={row.label} style={styles.summaryRow}>
+                  <Ionicons
+                    name={row.done ? "checkmark-circle" : "ellipse-outline"}
+                    size={15}
+                    color={row.done ? COLORS.success : COLORS.border}
+                  />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text style={styles.summaryLabel}>{row.label}</Text>
+                    <Text style={styles.summaryValue} numberOfLines={2}>
+                      {row.value}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </DesktopCard>
+            {submitBlock}
+          </>
+        }
+      />
+    );
+  }
+
   return (
     <ConnectionGate>
       <View style={styles.root}>
@@ -159,169 +433,10 @@ export function HostelComplaintFormScreen({ navigation }: Props) {
             title="Register a complaint"
             subtitle="Goes to the hostel office. Other students can't see it."
           >
-            <Text style={styles.label}>Hostel</Text>
-            {HOSTEL_GROUPS.map((group) => {
-              const hostels = options.hostels.filter((h) => h.group === group.key);
-              if (hostels.length === 0) return null;
-              return (
-                <View key={group.key}>
-                  <Text style={styles.groupLabel}>{group.label}</Text>
-                  <View style={styles.chips}>
-                    {hostels.map((h) => (
-                      <Chip
-                        key={h.id}
-                        label={h.label}
-                        active={hostel === h.id}
-                        onPress={() => {
-                          setHostel(h.id);
-                          // A block letter from another hostel isn't valid here.
-                          if (!h.blocks.includes(block)) setBlock("");
-                          clearError("hostel");
-                          clearError("block");
-                        }}
-                      />
-                    ))}
-                  </View>
-                </View>
-              );
-            })}
-            <ValidationMessage message={fieldErrors.hostel} field />
-
-            {/* Blocks appear once a hostel is picked, and only if it has any listed. */}
-            {selectedHostel && selectedHostel.blocks.length > 0 ? (
-              <>
-                <Text style={styles.label}>Block in {selectedHostel.label}</Text>
-                <View style={styles.chips}>
-                  {selectedHostel.blocks.map((b) => (
-                    <Chip
-                      key={b}
-                      label={`Block ${b}`}
-                      active={block === b}
-                      onPress={() => {
-                        setBlock(b);
-                        clearError("block");
-                      }}
-                    />
-                  ))}
-                </View>
-                <ValidationMessage message={fieldErrors.block} field />
-              </>
-            ) : null}
-
-            <Field
-              label="Room number (optional)"
-              value={room}
-              onChangeText={setRoom}
-              placeholder="e.g. 214, or Mess hall"
-              autoCapitalize="sentences"
-            />
-
-            <Text style={styles.label}>What is the problem?</Text>
-            <View style={styles.chips}>
-              {options.categories.map((c) => (
-                <Chip
-                  key={c.id}
-                  label={c.label}
-                  active={category === c.id}
-                  onPress={() => {
-                    setCategory(c.id);
-                    clearError("category");
-                  }}
-                />
-              ))}
-            </View>
-            <ValidationMessage message={fieldErrors.category} field />
-
-            <Text style={styles.label}>Describe the problem</Text>
-            <Text style={styles.muted}>
-              At least {minWords} words: what is wrong, exactly where, since when, who you have
-              already told, and how it affects students.
-            </Text>
-            <TextInput
-              style={[styles.textarea, fieldErrors.description ? styles.textareaError : null]}
-              value={description}
-              onChangeText={(text) => {
-                setDescription(text);
-                clearError("description");
-              }}
-              placeholder="For the last week the tap in the second-floor bathroom of Block B has been leaking…"
-              placeholderTextColor={COLORS.textMuted}
-              multiline
-              textAlignVertical="top"
-              autoCapitalize="sentences"
-            />
-            <View style={styles.counterRow}>
-              <View style={styles.counterTrack}>
-                <View
-                  style={[
-                    styles.counterFill,
-                    { width: `${Math.min(100, (words / minWords) * 100)}%` },
-                    enoughWords && styles.counterFillDone,
-                  ]}
-                />
-              </View>
-              <Text style={[styles.counterText, enoughWords && styles.counterTextDone]}>
-                {words} / {minWords} words
-              </Text>
-            </View>
-            <ValidationMessage message={fieldErrors.description || textProblem} field />
-
-            <Text style={styles.label}>Photo of the problem</Text>
-            {photo ? (
-              <View>
-                <PhotoView key={photoKey} uri={photo.uri} style={styles.photoPreview} />
-                <View style={styles.photoActions}>
-                  <Pressable onPress={pickFromGallery} style={styles.linkBtn}>
-                    <Ionicons name="swap-horizontal" size={14} color={COLORS.primary} />
-                    <Text style={styles.linkText}>Change photo</Text>
-                  </Pressable>
-                  <Pressable onPress={() => setPhoto(null)} style={styles.linkBtn}>
-                    <Ionicons name="trash-outline" size={14} color={COLORS.accent} />
-                    <Text style={[styles.linkText, { color: COLORS.accent }]}>Remove</Text>
-                  </Pressable>
-                </View>
-              </View>
-            ) : (
-              <View style={styles.photoRow}>
-                <Pressable
-                  onPress={pickFromGallery}
-                  style={({ pressed }) => [
-                    styles.photoBox,
-                    fieldErrors.photo ? styles.photoBoxError : null,
-                    pressed && styles.pressed,
-                  ]}
-                >
-                  <Ionicons name="image-outline" size={24} color={COLORS.primary} />
-                  <Text style={styles.photoHint}>
-                    {Platform.OS === "web" ? "Choose a photo" : "Gallery"}
-                  </Text>
-                </Pressable>
-                {/* A browser's file dialog already offers the camera on phones. */}
-                {Platform.OS !== "web" ? (
-                  <Pressable
-                    onPress={takePhoto}
-                    style={({ pressed }) => [
-                      styles.photoBox,
-                      fieldErrors.photo ? styles.photoBoxError : null,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <Ionicons name="camera-outline" size={24} color={COLORS.primary} />
-                    <Text style={styles.photoHint}>Camera</Text>
-                  </Pressable>
-                ) : null}
-              </View>
-            )}
-            <ValidationMessage message={fieldErrors.photo} field />
-
-            <ValidationMessage message={formError} />
-
-            <AppButton
-              label={submitting ? "Sending…" : "Register complaint"}
-              onPress={submit}
-              disabled={submitting}
-              loading={submitting}
-            />
+            {whereFields}
+            {problemFields}
+            {photoField}
+            {submitBlock}
           </ScreenShell>
         </KeyboardAwareScrollView>
       </View>
@@ -347,6 +462,16 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 6,
   },
+  summaryTitle: { fontFamily: FONTS.displayMedium, fontSize: 15, color: COLORS.text, marginBottom: 8 },
+  summaryRow: { flexDirection: "row", gap: 9, alignItems: "flex-start", paddingVertical: 5 },
+  summaryLabel: {
+    fontFamily: FONTS.sansBold,
+    fontSize: 10.5,
+    color: COLORS.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  summaryValue: { marginTop: 1, fontFamily: FONTS.sansSemi, fontSize: 13, color: COLORS.text },
   muted: {
     fontFamily: FONTS.sans,
     fontSize: 12,

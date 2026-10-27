@@ -1,5 +1,13 @@
 import React, { useCallback, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -7,12 +15,21 @@ import { resolveImageUrl } from "../api/client";
 import { fetchHostelComplaint, fetchHostelOptions, updateHostelComplaint } from "../api/hostel";
 import { ConnectionBanner } from "../components/ConnectionBanner";
 import { ConnectionGate } from "../components/ConnectionGate";
+import { DesktopCard, DesktopPage } from "../components/DesktopPage";
+import { SidebarShell } from "../components/SidebarShell";
 import { LoadingOverlay } from "../components/LoadingOverlay";
 import { PhotoView } from "../components/PhotoView";
 import { AppButton, Chip, Field } from "../components/Ui";
 import { ErrorState, ValidationMessage } from "../components/states";
 import { useAuth } from "../context/AuthContext";
-import { COLORS, CONTENT_MAX_WIDTH, FONTS, RADIUS, SHADOW } from "../constants/config";
+import {
+  COLORS,
+  CONTENT_MAX_WIDTH,
+  FONTS,
+  RADIUS,
+  SHADOW,
+  WIDE_BREAKPOINT,
+} from "../constants/config";
 import { HOSTEL_STATUS_STEPS, complaintPlace } from "../constants/hostel";
 import { RootStackParamList } from "../navigation/types";
 import { ApiError, HostelComplaint, HostelComplaintStatus } from "../types";
@@ -36,6 +53,8 @@ export function HostelComplaintDetailScreen({ route }: Props) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const { width } = useWindowDimensions();
+  const wide = width >= WIDE_BREAKPOINT;
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -81,11 +100,155 @@ export function HostelComplaintDetailScreen({ route }: Props) {
     }
   };
 
-  if (loading) return <LoadingOverlay label="Loading complaint" />;
+  if (loading && !wide) return <LoadingOverlay label="Loading complaint" />;
   if (error) return <ErrorState error={error} onRetry={load} />;
-  if (!complaint) return <ErrorState error={new Error("Complaint not found.")} />;
+  if (!complaint) {
+    // Desktop first load: keep the sidebar and show its in-pane spinner.
+    if (loading) return <SidebarShell active="hostel" loading>{null}</SidebarShell>;
+    return <ErrorState error={new Error("Complaint not found.")} />;
+  }
 
   const stepIndex = HOSTEL_STATUS_STEPS.findIndex((s) => s.key === complaint.status);
+
+  const reporterCard =
+    isStaff && complaint.reporter_vtu_id ? (
+      <View style={[styles.card, wide && styles.cardDesk]}>
+        <Text style={styles.cardLabel}>Filed by</Text>
+        <Text style={styles.reporterName}>
+          {complaint.reporter_name || complaint.reporter_vtu_id}
+        </Text>
+        <Text style={styles.reporterMeta}>
+          {complaint.reporter_vtu_id}
+          {complaint.reporter_department ? ` · ${complaint.reporter_department}` : ""}
+        </Text>
+        {complaint.reporter_phone ? (
+          <Pressable
+            style={styles.callBtn}
+            onPress={() => Linking.openURL(`tel:${complaint.reporter_phone}`)}
+          >
+            <Ionicons name="call" size={14} color={COLORS.primary} />
+            <Text style={styles.callBtnText}>Call {complaint.reporter_phone}</Text>
+          </Pressable>
+        ) : null}
+      </View>
+    ) : null;
+
+  const photoCard = (
+    <View style={[styles.card, wide && styles.cardDesk]}>
+      <Text style={styles.cardLabel}>Photo</Text>
+      <PhotoView
+        uri={resolveImageUrl(complaint.attachment_url)}
+        style={[styles.photo, wide && styles.photoDesk]}
+        fallbackHint="Photo unavailable"
+      />
+    </View>
+  );
+
+  const complaintCard = (
+    <View style={[styles.card, wide && styles.cardDesk]}>
+      <Text style={styles.cardLabel}>Complaint · {complaint.word_count} words</Text>
+      <Text style={styles.cardBody}>{complaint.description}</Text>
+    </View>
+  );
+
+  const reply = complaint.staff_note ? (
+    <View style={[styles.card, styles.noteCard, wide && styles.cardDesk]}>
+      <View style={styles.noteHeader}>
+        <Ionicons name="chatbox-ellipses" size={14} color={COLORS.primary} />
+        <Text style={styles.noteLabel}>Reply from the hostel office</Text>
+      </View>
+      <Text style={styles.cardBody}>{complaint.staff_note}</Text>
+    </View>
+  ) : !isStaff ? (
+    <Text style={[styles.waiting, wide && styles.waitingDesk]}>
+      No reply yet. The hostel office has your complaint and will update it here.
+    </Text>
+  ) : null;
+
+  const staffControls = isStaff ? (
+    <>
+      <Text style={[styles.label, wide && styles.labelDesk]}>Status</Text>
+      <View style={styles.chips}>
+        {HOSTEL_STATUS_STEPS.map((opt) => (
+          <Chip
+            key={opt.key}
+            label={opt.label}
+            active={status === opt.key}
+            onPress={() => {
+              setStatus(opt.key);
+              setSaved(false);
+            }}
+          />
+        ))}
+      </View>
+      <Field
+        label="Reply to the student (optional)"
+        value={note}
+        onChangeText={(text) => {
+          setNote(text);
+          setSaved(false);
+        }}
+        placeholder="What was done, or when the repair is planned…"
+        autoCapitalize="sentences"
+        multiline
+        numberOfLines={4}
+      />
+      <ValidationMessage message={saveError} />
+      {saved ? <Text style={styles.savedText}>Saved.</Text> : null}
+      <AppButton
+        label={saving ? "Saving…" : "Save update"}
+        onPress={save}
+        disabled={saving}
+        loading={saving}
+      />
+    </>
+  ) : null;
+
+  if (wide) {
+    return (
+      <DesktopPage
+        active="hostel"
+        eyebrow={isStaff ? "Hostel · Hostel office" : "Hostel · Your complaint"}
+        title={complaint.category_label}
+        subtitle={`${complaintPlace(complaint)} · filed ${new Date(complaint.created_at).toLocaleString()}`}
+        main={
+          <>
+            {photoCard}
+            {complaintCard}
+          </>
+        }
+        side={
+          <>
+            <DesktopCard>
+              <Text style={styles.cardLabel}>Status</Text>
+              {HOSTEL_STATUS_STEPS.map((step, i) => {
+                const done = i <= stepIndex;
+                return (
+                  <View key={step.key} style={styles.timelineRow}>
+                    <View style={styles.timelineRail}>
+                      <View style={[styles.timelineDot, done && styles.timelineDotDone]}>
+                        {done ? <Ionicons name="checkmark" size={11} color="#fff" /> : null}
+                      </View>
+                      {i < HOSTEL_STATUS_STEPS.length - 1 ? (
+                        <View style={[styles.timelineLine, i < stepIndex && styles.timelineLineDone]} />
+                      ) : null}
+                    </View>
+                    <Text style={[styles.timelineLabel, done && styles.timelineLabelDone]}>
+                      {step.label}
+                      {i === stepIndex ? "  ·  current" : ""}
+                    </Text>
+                  </View>
+                );
+              })}
+            </DesktopCard>
+            {reply}
+            {reporterCard}
+            {staffControls ? <DesktopCard>{staffControls}</DesktopCard> : null}
+          </>
+        }
+      />
+    );
+  }
 
   return (
     <ConnectionGate>
@@ -120,96 +283,11 @@ export function HostelComplaintDetailScreen({ route }: Props) {
             ))}
           </View>
 
-          {isStaff && complaint.reporter_vtu_id ? (
-            <View style={styles.card}>
-              <Text style={styles.cardLabel}>Filed by</Text>
-              <Text style={styles.reporterName}>
-                {complaint.reporter_name || complaint.reporter_vtu_id}
-              </Text>
-              <Text style={styles.reporterMeta}>
-                {complaint.reporter_vtu_id}
-                {complaint.reporter_department ? ` · ${complaint.reporter_department}` : ""}
-              </Text>
-              {complaint.reporter_phone ? (
-                <Pressable
-                  style={styles.callBtn}
-                  onPress={() => Linking.openURL(`tel:${complaint.reporter_phone}`)}
-                >
-                  <Ionicons name="call" size={14} color={COLORS.primary} />
-                  <Text style={styles.callBtnText}>Call {complaint.reporter_phone}</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          ) : null}
-
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>Photo</Text>
-            <PhotoView
-              uri={resolveImageUrl(complaint.attachment_url)}
-              style={styles.photo}
-              fallbackHint="Photo unavailable"
-            />
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>
-              Complaint · {complaint.word_count} words
-            </Text>
-            <Text style={styles.cardBody}>{complaint.description}</Text>
-          </View>
-
-          {complaint.staff_note ? (
-            <View style={[styles.card, styles.noteCard]}>
-              <View style={styles.noteHeader}>
-                <Ionicons name="chatbox-ellipses" size={14} color={COLORS.primary} />
-                <Text style={styles.noteLabel}>Reply from the hostel office</Text>
-              </View>
-              <Text style={styles.cardBody}>{complaint.staff_note}</Text>
-            </View>
-          ) : !isStaff ? (
-            <Text style={styles.waiting}>
-              No reply yet. The hostel office has your complaint and will update it here.
-            </Text>
-          ) : null}
-
-          {isStaff ? (
-            <>
-              <Text style={styles.label}>Status</Text>
-              <View style={styles.chips}>
-                {HOSTEL_STATUS_STEPS.map((opt) => (
-                  <Chip
-                    key={opt.key}
-                    label={opt.label}
-                    active={status === opt.key}
-                    onPress={() => {
-                      setStatus(opt.key);
-                      setSaved(false);
-                    }}
-                  />
-                ))}
-              </View>
-              <Field
-                label="Reply to the student (optional)"
-                value={note}
-                onChangeText={(text) => {
-                  setNote(text);
-                  setSaved(false);
-                }}
-                placeholder="What was done, or when the repair is planned…"
-                autoCapitalize="sentences"
-                multiline
-                numberOfLines={4}
-              />
-              <ValidationMessage message={saveError} />
-              {saved ? <Text style={styles.savedText}>Saved.</Text> : null}
-              <AppButton
-                label={saving ? "Saving…" : "Save update"}
-                onPress={save}
-                disabled={saving}
-                loading={saving}
-              />
-            </>
-          ) : null}
+          {reporterCard}
+          {photoCard}
+          {complaintCard}
+          {reply}
+          {staffControls}
         </ScrollView>
       </View>
     </ConnectionGate>
@@ -286,5 +364,26 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   chips: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 8 },
+  cardDesk: { marginTop: 0 },
+  photoDesk: { height: 360 },
+  labelDesk: { marginTop: 0 },
+  waitingDesk: { marginTop: 0, paddingHorizontal: 4 },
+  timelineRow: { flexDirection: "row", gap: 10, minHeight: 34 },
+  timelineRail: { alignItems: "center", width: 20 },
+  timelineDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  timelineDotDone: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  timelineLine: { flex: 1, width: 2, backgroundColor: COLORS.border, marginVertical: 2 },
+  timelineLineDone: { backgroundColor: COLORS.primary },
+  timelineLabel: { fontFamily: FONTS.sansMedium, fontSize: 13, color: COLORS.textMuted, paddingTop: 1 },
+  timelineLabelDone: { color: COLORS.text, fontFamily: FONTS.sansSemi },
   savedText: { fontFamily: FONTS.sansSemi, fontSize: 12, color: COLORS.success, marginBottom: 8 },
 });
