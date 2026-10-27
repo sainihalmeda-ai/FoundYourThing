@@ -1,10 +1,15 @@
-import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useRef } from "react";
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { resolveImageUrl } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { navigate } from "../navigation/navigationRef";
-import { useDesktopLayout } from "../lib/useDesktopLayout";
+import { useSidebarPref } from "../context/SidebarContext";
+import {
+  SIDEBAR_COMPACT_WIDTH,
+  SIDEBAR_WIDTH,
+  useDesktopLayout,
+} from "../lib/useDesktopLayout";
 import { UserAvatarPlaceholder } from "./UserAvatarPlaceholder";
 import { COLORS, FONTS } from "../constants/config";
 
@@ -85,19 +90,53 @@ export function DesktopSidebar({
   pendingCount?: number;
 }) {
   const { user, logout } = useAuth();
-  // Narrow desktop windows get an icon-only rail so pages keep their room.
+  // Icon-only rail: the user's show/hide choice, or automatic in narrow windows.
   const { compactNav: compact } = useDesktopLayout();
+  const { setCollapsed } = useSidebarPref();
+
+  // Slide between the two widths rather than jumping (layout prop, so JS driver).
+  const width = useRef(new Animated.Value(compact ? SIDEBAR_COMPACT_WIDTH : SIDEBAR_WIDTH)).current;
+  useEffect(() => {
+    Animated.timing(width, {
+      toValue: compact ? SIDEBAR_COMPACT_WIDTH : SIDEBAR_WIDTH,
+      duration: 220,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [compact, width]);
+
+  const toggle = (
+    <Pressable
+      onPress={() => setCollapsed(!compact)}
+      accessibilityRole="button"
+      accessibilityLabel={compact ? "Show sidebar" : "Hide sidebar"}
+      {...({ title: compact ? "Show sidebar" : "Hide sidebar" } as object)}
+      hitSlop={6}
+      style={({ pressed }) => [styles.toggle, pressed && styles.itemPressed]}
+    >
+      <Ionicons
+        name={compact ? "chevron-forward" : "chevron-back"}
+        size={14}
+        color={COLORS.textMuted}
+      />
+    </Pressable>
+  );
   const firstName =
     user?.full_name?.trim().split(/\s+/)[0] || user?.vtu_id?.replace(/^VTU/i, "") || "Student";
   const initial = firstName.charAt(0).toUpperCase();
 
   return (
-    <View style={[styles.root, compact && styles.rootCompact]}>
+    <Animated.View style={[styles.root, compact && styles.rootCompact, { width }]}>
       <View style={[styles.brandRow, compact && styles.brandRowCompact]}>
         <View style={styles.brandMark}>
           <Text style={styles.brandMarkText}>FYT</Text>
         </View>
-        {compact ? null : <Text style={styles.brandName}>FoundYourThing</Text>}
+        {compact ? null : (
+          <Text style={styles.brandName} numberOfLines={1}>
+            FoundYourThing
+          </Text>
+        )}
+        {toggle}
       </View>
 
       {NAV_GROUPS.map((group, index) => (
@@ -158,7 +197,7 @@ export function DesktopSidebar({
           <Ionicons name="log-out-outline" size={18} color={COLORS.textMuted} />
         </Pressable>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -207,17 +246,28 @@ function SidebarItem({
 
 const styles = StyleSheet.create({
   root: {
-    width: 240,
+    width: SIDEBAR_WIDTH,
     flexShrink: 0,
+    overflow: "hidden",
     backgroundColor: COLORS.card,
     borderRightWidth: 1,
     borderRightColor: COLORS.border,
     paddingVertical: 24,
     paddingHorizontal: 16,
   },
-  rootCompact: { width: 76, paddingHorizontal: 12, alignItems: "stretch" },
+  rootCompact: { width: SIDEBAR_COMPACT_WIDTH, paddingHorizontal: 12, alignItems: "stretch" },
   brandRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 6, marginBottom: 28 },
-  brandRowCompact: { justifyContent: "center", paddingHorizontal: 0 },
+  brandRowCompact: { flexDirection: "column", justifyContent: "center", paddingHorizontal: 0 },
+  toggle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.card,
+  },
   groupDivider: { height: 1, backgroundColor: COLORS.divider, marginVertical: 12, marginHorizontal: 8 },
   itemCompact: { justifyContent: "center", paddingHorizontal: 0, height: 44 },
   badgeCompact: { position: "absolute", top: 4, right: 6 },
@@ -231,7 +281,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   brandMarkText: { color: "#fff", fontFamily: FONTS.sansBold, fontSize: 10 },
-  brandName: { fontFamily: FONTS.displayMedium, fontSize: 14.5, color: COLORS.text },
+  brandName: { flex: 1, fontFamily: FONTS.displayMedium, fontSize: 14.5, color: COLORS.text },
   groupLabel: {
     paddingHorizontal: 14,
     fontFamily: FONTS.sansBold,

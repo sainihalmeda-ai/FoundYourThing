@@ -3,10 +3,12 @@ import { View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import * as ExpoLinking from "expo-linking";
+import { BadgeCelebrationHost } from "../components/BadgeCelebrationHost";
 import { ClaimNoticeHost } from "../components/ClaimNoticeHost";
 import { LoadingOverlay } from "../components/LoadingOverlay";
 import { SessionExpiringModal } from "../components/SessionExpiringModal";
 import { useAuth } from "../context/AuthContext";
+import { SidebarProvider } from "../context/SidebarContext";
 import { DownloadScreen } from "../screens/DownloadScreen";
 import { LoginScreen } from "../screens/LoginScreen";
 import { RegisterScreen } from "../screens/RegisterScreen";
@@ -51,11 +53,12 @@ export function AppNavigator() {
     >
       <View style={{ flex: 1, backgroundColor: COLORS.background }}>
         {token ? (
-          <>
+          <SidebarProvider>
             <AppStack />
             <ClaimNoticeHost />
+            <BadgeCelebrationHost />
             <SessionExpiringModal />
-          </>
+          </SidebarProvider>
         ) : (
           <AuthStack.Navigator
             screenOptions={{
