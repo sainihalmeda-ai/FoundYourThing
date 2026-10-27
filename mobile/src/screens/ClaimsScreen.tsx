@@ -5,13 +5,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchIncomingClaims, respondClaim } from "../api/auth";
 import { resolveImageUrl } from "../api/client";
 import { ConnectionBanner } from "../components/ConnectionBanner";
-import { ConnectionGate } from "../components/ConnectionGate";
 import { DaylightBackdrop } from "../components/SpatialBackdrop";
 import { ErrorState } from "../components/ErrorState";
 import { HomeButton } from "../components/HomeButton";
-import { LoadingOverlay } from "../components/LoadingOverlay";
 import { MatchScore } from "../components/MatchScore";
 import { PhotoView } from "../components/PhotoView";
+import { SidebarShell } from "../components/SidebarShell";
 import { AppButton, Badge } from "../components/Ui";
 import { EmptyState, SuccessState } from "../components/states";
 import { useAuth } from "../context/AuthContext";
@@ -70,11 +69,6 @@ export function ClaimsScreen() {
     }
   };
 
-  if (loading) {
-    return (
-      <LoadingOverlay label="Loading requests" hint="Checking claims waiting for you…" />
-    );
-  }
   if (error) return <ErrorState error={error} onRetry={() => { setError(null); load(); }} />;
   if (success) {
     return (
@@ -88,98 +82,101 @@ export function ClaimsScreen() {
   }
 
   return (
-    <ConnectionGate>
-      <View style={styles.root}>
-        <DaylightBackdrop />
-        <ConnectionBanner />
-        <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) + 8 }]}>
-          <View style={styles.headerTop}>
-            <View style={styles.headerText}>
-              <Text style={styles.title} numberOfLines={2}>
-                Incoming requests
-              </Text>
-              <Text style={styles.subtitle}>Verify carefully before sharing contact</Text>
-            </View>
-            <HomeButton />
+    <SidebarShell
+      active="claims"
+      pendingCount={claims.length}
+      loading={loading}
+      loadingLabel="Loading requests"
+      loadingHint="Checking claims waiting for you…"
+      backdrop={<DaylightBackdrop />}
+    >
+      <ConnectionBanner />
+      <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) + 8 }]}>
+        <View style={styles.headerTop}>
+          <View style={styles.headerText}>
+            <Text style={styles.title} numberOfLines={2}>
+              Incoming requests
+            </Text>
+            <Text style={styles.subtitle}>Verify carefully before sharing contact</Text>
           </View>
+          <HomeButton />
         </View>
-        <FlatList
-          data={claims}
-          keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) => {
-            // Either side can start the conversation, so work out which report is yours.
-            const iOwnLost = item.match.lost_item.reporter_vtu_id === user?.vtu_id;
-            const yours = iOwnLost ? item.match.lost_item : item.match.found_item;
-            const theirs = iOwnLost ? item.match.found_item : item.match.lost_item;
-            const side = photoSide[item.id] ?? "theirs";
-            const imageUrl = side === "theirs" ? theirs.image_url : yours.image_url;
-            return (
-              <View style={styles.card}>
-                <View style={styles.cardTop}>
-                  <Badge label="Pending" tone="connected" />
-                  <Text style={styles.claimFrom}>
-                    {iOwnLost
-                      ? `${item.counterparty.vtu_id} may have found your item`
-                      : `Claim from ${item.counterparty.vtu_id}`}
-                  </Text>
-                </View>
-                {item.counterparty.full_name ? (
-                  <Text style={styles.maskedName}>{item.counterparty.full_name}</Text>
-                ) : null}
-
-                <View style={styles.photoToggle}>
-                  {(["theirs", "yours"] as const).map((key) => (
-                    <Pressable
-                      key={key}
-                      style={[styles.toggleItem, side === key && styles.toggleItemActive]}
-                      onPress={() => setPhotoSide((prev) => ({ ...prev, [item.id]: key }))}
-                    >
-                      <Text style={[styles.toggleText, side === key && styles.toggleTextActive]}>
-                        {key === "theirs" ? "Their photo" : "Your photo"}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-                <PhotoView uri={resolveImageUrl(imageUrl)} style={styles.photo} />
-
-                <Text style={styles.itemTitle}>{theirs.title}</Text>
-                <MatchScore percent={item.match.combined_score} />
-                <Text style={styles.message}>{item.message || "No message"}</Text>
-
-                <AppButton
-                  label={respondingId === item.id ? "Working..." : "Accept & share"}
-                  onPress={() => respond(item.id, true)}
-                  disabled={respondingId === item.id}
-                  loading={respondingId === item.id}
-                />
-                <AppButton
-                  label="Reject"
-                  onPress={() => respond(item.id, false)}
-                  variant="danger"
-                  disabled={respondingId === item.id}
-                  style={{ marginTop: 10 }}
-                />
-              </View>
-            );
-          }}
-          ListEmptyComponent={
-            <EmptyState
-              title="All clear"
-              message="No pending claims right now. When someone claims an item you found, it shows up here."
-              compact
-            />
-          }
-        />
       </View>
-    </ConnectionGate>
+      <FlatList
+        data={claims}
+        keyExtractor={(item) => String(item.id)}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        renderItem={({ item }) => {
+          // Either side can start the conversation, so work out which report is yours.
+          const iOwnLost = item.match.lost_item.reporter_vtu_id === user?.vtu_id;
+          const yours = iOwnLost ? item.match.lost_item : item.match.found_item;
+          const theirs = iOwnLost ? item.match.found_item : item.match.lost_item;
+          const side = photoSide[item.id] ?? "theirs";
+          const imageUrl = side === "theirs" ? theirs.image_url : yours.image_url;
+          return (
+            <View style={styles.card}>
+              <View style={styles.cardTop}>
+                <Badge label="Pending" tone="connected" />
+                <Text style={styles.claimFrom}>
+                  {iOwnLost
+                    ? `${item.counterparty.vtu_id} may have found your item`
+                    : `Claim from ${item.counterparty.vtu_id}`}
+                </Text>
+              </View>
+              {item.counterparty.full_name ? (
+                <Text style={styles.maskedName}>{item.counterparty.full_name}</Text>
+              ) : null}
+
+              <View style={styles.photoToggle}>
+                {(["theirs", "yours"] as const).map((key) => (
+                  <Pressable
+                    key={key}
+                    style={[styles.toggleItem, side === key && styles.toggleItemActive]}
+                    onPress={() => setPhotoSide((prev) => ({ ...prev, [item.id]: key }))}
+                  >
+                    <Text style={[styles.toggleText, side === key && styles.toggleTextActive]}>
+                      {key === "theirs" ? "Their photo" : "Your photo"}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+              <PhotoView uri={resolveImageUrl(imageUrl)} style={styles.photo} />
+
+              <Text style={styles.itemTitle}>{theirs.title}</Text>
+              <MatchScore percent={item.match.combined_score} />
+              <Text style={styles.message}>{item.message || "No message"}</Text>
+
+              <AppButton
+                label={respondingId === item.id ? "Working..." : "Accept & share"}
+                onPress={() => respond(item.id, true)}
+                disabled={respondingId === item.id}
+                loading={respondingId === item.id}
+              />
+              <AppButton
+                label="Reject"
+                onPress={() => respond(item.id, false)}
+                variant="danger"
+                disabled={respondingId === item.id}
+                style={{ marginTop: 10 }}
+              />
+            </View>
+          );
+        }}
+        ListEmptyComponent={
+          <EmptyState
+            title="All clear"
+            message="No pending claims right now. When someone claims an item you found, it shows up here."
+            compact
+          />
+        }
+      />
+    </SidebarShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.background },
   header: {
     paddingHorizontal: 20,
     paddingBottom: 10,
