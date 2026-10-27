@@ -21,12 +21,14 @@ import { ErrorState } from "../components/ErrorState";
 import { HomeButton } from "../components/HomeButton";
 import { SidebarShell } from "../components/SidebarShell";
 import { ItemCard } from "../components/ItemCard";
+import { FeedDesktop } from "../components/feed/FeedDesktop";
 import { PageEnter } from "../components/PageEnter";
 import {
   EmptyState,
   NoSearchResultsState,
 } from "../components/states";
 import { useAuth } from "../context/AuthContext";
+import { matchesQuery, returnedLast } from "../lib/feedFilter";
 import { RootStackParamList } from "../navigation/types";
 import { COLORS, FONTS, RADIUS, SHADOW, WIDE_BREAKPOINT } from "../constants/config";
 import type { Item } from "../types";
@@ -48,6 +50,7 @@ export function FeedScreen() {
   const [query, setQuery] = useState("");
   const [tab, setTab] = useState<FeedTab>("found");
   const [segmentW, setSegmentW] = useState(0);
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -59,6 +62,7 @@ export function FeedScreen() {
       ]);
       setCampusItems(campus);
       setMyItems(mine);
+      setUpdatedAt(new Date());
     } catch (err) {
       setError(err);
     } finally {
@@ -81,35 +85,63 @@ export function FeedScreen() {
   const cellW = Math.max((segmentW - 8) / 3, 0);
   const pillLeft = 4 + TAB_ORDER.indexOf(tab) * cellW;
 
-  const sectionItems = useMemo(() => {
-    if (tab === "mine") return myItems;
-    const list = campusItems.filter((item) => item.item_type === tab);
-    return [...list].sort((a, b) => {
-      const ar = a.status === "recovered" ? 1 : 0;
-      const br = b.status === "recovered" ? 1 : 0;
-      return ar - br;
-    });
-  }, [campusItems, myItems, tab]);
+  const sectionItems = useMemo(
+    () =>
+      tab === "mine"
+        ? myItems
+        : returnedLast(campusItems.filter((item) => item.item_type === tab)),
+    [campusItems, myItems, tab],
+  );
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return sectionItems;
-    return sectionItems.filter((item) => {
-      const haystack = [
-        item.title,
-        item.description,
-        item.location,
-        item.category_label,
-        item.reporter_vtu_id,
-        item.status,
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(q);
-    });
-  }, [sectionItems, query]);
+  const filtered = useMemo(
+    () => sectionItems.filter((item) => matchesQuery(item, query)),
+    [sectionItems, query],
+  );
+
+  const refresh = () => {
+    setRefreshing(true);
+    load();
+  };
+
+  /** Claim / answer buttons on a card — only on other students' open reports. */
+  const cardActions = (item: Item) => ({
+    onRaiseLostClaim:
+      item.item_type === "found" &&
+      item.reporter_vtu_id !== user?.vtu_id &&
+      item.status !== "recovered"
+        ? () => navigation.navigate("Report", { mode: "lost", linkFoundId: item.id })
+        : undefined,
+    onAnswerLost:
+      item.item_type === "lost" && item.reporter_vtu_id !== user?.vtu_id
+        ? () => navigation.navigate("Report", { mode: "found", linkLostId: item.id })
+        : undefined,
+  });
 
   if (error) return <ErrorState error={error} onRetry={load} />;
+
+  if (wide) {
+    return (
+      <SidebarShell
+        active="feed"
+        loading={loading}
+        loadingLabel="Loading campus feed"
+        backdrop={<DaylightBackdrop />}
+      >
+        <ConnectionBanner />
+        <FeedDesktop
+          campusItems={campusItems}
+          myItems={myItems}
+          myVtu={user?.vtu_id}
+          refreshing={refreshing}
+          updatedAt={updatedAt}
+          onRefresh={refresh}
+          onOpen={(item) => navigation.navigate("ItemDetail", { itemId: item.id })}
+          cardActions={cardActions}
+          onReport={(mode) => navigation.navigate("Report", { mode })}
+        />
+      </SidebarShell>
+    );
+  }
 
   const tabs: { key: FeedTab; label: string }[] = [
     { key: "lost", label: "Lost" },
@@ -124,7 +156,6 @@ export function FeedScreen() {
           style={[
             styles.header,
             { paddingTop: Math.max(insets.top, 12) + 8 },
-            wide && styles.wideCol,
           ]}
         >
           <View style={styles.headerTop}>
@@ -136,10 +167,7 @@ export function FeedScreen() {
               <Pressable
                 style={styles.refreshBtn}
                 accessibilityLabel="Refresh feed"
-                onPress={() => {
-                  setRefreshing(true);
-                  load();
-                }}
+                onPress={refresh}
               >
                 <Ionicons name="refresh" size={18} color={COLORS.primary} />
               </Pressable>
@@ -196,50 +224,23 @@ export function FeedScreen() {
         <FlatList
           data={filtered}
           keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={[styles.list, wide && styles.wideCol]}
-          numColumns={wide ? 2 : 1}
-          key={wide ? "wide" : "narrow"}
-          columnWrapperStyle={wide ? styles.columnWrap : undefined}
+          contentContainerStyle={styles.list}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
-              onRefresh={() => {
-                setRefreshing(true);
-                load();
-              }}
+              onRefresh={refresh}
               tintColor={COLORS.accent}
             />
           }
           renderItem={({ item }) => (
-            <View style={wide ? styles.gridItem : undefined}>
-              <ItemCard
-                item={item}
-                isMine={item.reporter_vtu_id === user?.vtu_id}
-                onPress={() => navigation.navigate("ItemDetail", { itemId: item.id })}
-                onRaiseLostClaim={
-                  item.item_type === "found" &&
-                  item.reporter_vtu_id !== user?.vtu_id &&
-                  item.status !== "recovered"
-                    ? () =>
-                        navigation.navigate("Report", {
-                          mode: "lost",
-                          linkFoundId: item.id,
-                        })
-                    : undefined
-                }
-                onAnswerLost={
-                  item.item_type === "lost" && item.reporter_vtu_id !== user?.vtu_id
-                    ? () =>
-                        navigation.navigate("Report", {
-                          mode: "found",
-                          linkLostId: item.id,
-                        })
-                    : undefined
-                }
-              />
-            </View>
+            <ItemCard
+              item={item}
+              isMine={item.reporter_vtu_id === user?.vtu_id}
+              onPress={() => navigation.navigate("ItemDetail", { itemId: item.id })}
+              {...cardActions(item)}
+            />
           )}
           ListEmptyComponent={
             query.trim() ? (
@@ -286,11 +287,6 @@ export function FeedScreen() {
 }
 
 const styles = StyleSheet.create({
-  wideCol: {
-    width: "100%",
-    maxWidth: 768,
-    alignSelf: "center",
-  },
   header: {
     paddingHorizontal: 20,
     paddingTop: 16,
@@ -394,11 +390,5 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 24,
     flexGrow: 1,
-  },
-  columnWrap: {
-    gap: 12,
-  },
-  gridItem: {
-    flex: 1,
   },
 });

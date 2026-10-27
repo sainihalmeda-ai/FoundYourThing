@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { resolveImageUrl } from "../api/client";
 import type { Item } from "../types";
+import { timeAgo } from "../lib/timeAgo";
 import { PhotoView } from "./PhotoView";
 import { Badge } from "./Ui";
 import { COLORS, FONTS, RADIUS, SHADOW } from "../constants/config";
@@ -13,10 +14,13 @@ export function ItemCard({
   isMine = false,
   onRaiseLostClaim,
   onAnswerLost,
+  compact = false,
 }: {
   item: Item;
   onPress: () => void;
   isMine?: boolean;
+  /** Desktop grid card: smaller photo, one-line title, posted-ago row, short button labels. */
+  compact?: boolean;
   onRaiseLostClaim?: () => void;
   onAnswerLost?: () => void;
 }) {
@@ -30,13 +34,13 @@ export function ItemCard({
 
   return (
     <Pressable
-      style={({ pressed }) => [styles.card, pressed && { opacity: 0.94, transform: [{ scale: 0.99 }] }]}
+      style={({ pressed }) => [styles.card, compact && styles.cardCompact, pressed && { opacity: 0.94, transform: [{ scale: 0.99 }] }]}
       onPress={onPress}
     >
       <View style={styles.imageWrap}>
         <PhotoView
           uri={resolveImageUrl(item.image_url)}
-          style={styles.image}
+          style={[styles.image, compact && styles.imageCompact]}
           expandable={false}
           fallbackLabel={item.title}
           fallbackHint={`${item.category_label} · ${item.location}`}
@@ -50,7 +54,7 @@ export function ItemCard({
         </View>
       </View>
       <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={2}>
+        <Text style={styles.title} numberOfLines={compact ? 1 : 2}>
           {item.title}
         </Text>
         <View style={styles.metaRow}>
@@ -60,30 +64,50 @@ export function ItemCard({
               {item.category_label} · {item.location}
             </Text>
           </View>
-          <Text style={styles.vtu} numberOfLines={1}>
-            {item.reporter_vtu_id}
-          </Text>
+          {compact ? null : (
+            <Text style={styles.vtu} numberOfLines={1}>
+              {item.reporter_vtu_id}
+            </Text>
+          )}
         </View>
+        {compact ? (
+          <View style={styles.footRow}>
+            <View style={styles.metaLeft}>
+              <Ionicons name="person-outline" size={12} color={COLORS.textMuted} />
+              <Text style={styles.vtu} numberOfLines={1}>
+                {item.reporter_vtu_id}
+              </Text>
+            </View>
+            <View style={styles.timeChip}>
+              <Ionicons name="time-outline" size={11} color={COLORS.textMuted} />
+              <Text style={styles.timeText}>{timeAgo(item.created_at)}</Text>
+            </View>
+          </View>
+        ) : null}
         {canRaise ? (
           <Pressable
-            style={styles.claimBtn}
+            style={[styles.claimBtn, compact && styles.claimBtnCompact]}
             onPress={(e) => {
               e.stopPropagation?.();
               onRaiseLostClaim?.();
             }}
           >
-            <Text style={styles.claimBtnText}>This looks like mine — raise claim</Text>
+            <Text style={styles.claimBtnText}>
+              {compact ? "This is mine — raise claim" : "This looks like mine — raise claim"}
+            </Text>
           </Pressable>
         ) : null}
         {canAnswer ? (
           <Pressable
-            style={styles.claimBtn}
+            style={[styles.claimBtn, compact && styles.claimBtnCompact]}
             onPress={(e) => {
               e.stopPropagation?.();
               onAnswerLost?.();
             }}
           >
-            <Text style={styles.claimBtnText}>Looks like I found it — raise found report</Text>
+            <Text style={styles.claimBtnText}>
+              {compact ? "I found this — tell the owner" : "Looks like I found it — raise found report"}
+            </Text>
           </Pressable>
         ) : null}
       </View>
@@ -102,6 +126,26 @@ const styles = StyleSheet.create({
     padding: 12,
     ...SHADOW.soft,
   },
+  cardCompact: { marginBottom: 0, padding: 10 },
+  imageCompact: { height: 150 },
+  footRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    marginTop: 8,
+  },
+  timeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.surfaceMuted,
+  },
+  timeText: { fontFamily: FONTS.sansMedium, fontSize: 10.5, color: COLORS.textMuted },
+  claimBtnCompact: { marginTop: 10, paddingVertical: 9 },
   imageWrap: {
     position: "relative",
     borderRadius: RADIUS.xl,
