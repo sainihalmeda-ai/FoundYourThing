@@ -158,6 +158,18 @@ function MainTabs() {
 export function AppStack() {
   const { width } = useWindowDimensions();
   const wide = width >= WIDE_BREAKPOINT;
+
+  /**
+   * Pages that render inside SidebarShell on desktop: there the sidebar and
+   * DesktopPageHeader replace the stack header, and SidebarShell's fade
+   * replaces the slide (which would drag the sidebar along). Phones keep both.
+   */
+  const sidebarPage = (title: string) => ({
+    title,
+    headerShown: !wide,
+    animation: wide ? ("none" as const) : ("slide_from_right" as const),
+  });
+
   return (
     <Stack.Navigator
       initialRouteName="Chooser"
@@ -189,48 +201,33 @@ export function AppStack() {
         component={MainTabs}
         options={{ headerShown: false }}
       />
+      <Stack.Screen name="Report" component={ReportScreen} options={sidebarPage("New report")} />
       <Stack.Screen
-        name="Report"
-        component={ReportScreen}
-        // A sidebar page on desktop (see Safety below): no stack header or slide there.
-        options={{
-          title: "New report",
-          headerShown: !wide,
-          animation: wide ? "none" : "slide_from_right",
-        }}
+        name="ItemDetail"
+        component={ItemDetailScreen}
+        options={sidebarPage("Item details")}
       />
-      <Stack.Screen name="ItemDetail" component={ItemDetailScreen} options={{ title: "Item details" }} />
-      <Stack.Screen name="About" component={AboutScreen} options={{ title: "About" }} />
-      <Stack.Screen
-        name="Safety"
-        component={SafetyScreen}
-        // Safety is a sidebar page on desktop: SidebarShell animates it and the
-        // sidebar replaces the stack header, so drop both there.
-        options={{
-          title: "Report a concern",
-          headerShown: !wide,
-          animation: wide ? "none" : "slide_from_right",
-        }}
-      />
+      <Stack.Screen name="About" component={AboutScreen} options={sidebarPage("About")} />
+      <Stack.Screen name="Safety" component={SafetyScreen} options={sidebarPage("Report a concern")} />
       <Stack.Screen
         name="ReportConcern"
         component={ReportConcernScreen}
-        options={{ title: "Report a concern" }}
+        options={sidebarPage("Report a concern")}
       />
       <Stack.Screen
         name="ConcernDetail"
         component={ConcernDetailScreen}
-        options={{ title: "Your report" }}
+        options={sidebarPage("Your report")}
       />
       <Stack.Screen
         name="EnquiryInbox"
         component={EnquiryInboxScreen}
-        options={{ title: "Enquiry inbox" }}
+        options={sidebarPage("Enquiry inbox")}
       />
       <Stack.Screen
         name="EnquiryConcernDetail"
         component={EnquiryConcernDetailScreen}
-        options={{ title: "Report detail" }}
+        options={sidebarPage("Report detail")}
       />
     </Stack.Navigator>
   );

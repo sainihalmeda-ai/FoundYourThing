@@ -1,15 +1,24 @@
 import React, { useCallback, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { fetchMyConcerns } from "../api/auth";
 import { ConnectionBanner } from "../components/ConnectionBanner";
 import { ConnectionGate } from "../components/ConnectionGate";
+import { DesktopCard, DesktopPage } from "../components/DesktopPage";
+import { SidebarShell } from "../components/SidebarShell";
 import { ErrorState } from "../components/states";
 import { LoadingOverlay } from "../components/LoadingOverlay";
 import { useAuth } from "../context/AuthContext";
-import { COLORS, CONTENT_MAX_WIDTH, FONTS, RADIUS, SHADOW } from "../constants/config";
+import {
+  COLORS,
+  CONTENT_MAX_WIDTH,
+  FONTS,
+  RADIUS,
+  SHADOW,
+  WIDE_BREAKPOINT,
+} from "../constants/config";
 import { RootStackParamList } from "../navigation/types";
 import type { Concern, ConcernStatus } from "../types";
 
@@ -27,6 +36,8 @@ export function ConcernDetailScreen({ route }: Props) {
   const [concern, setConcern] = useState<Concern | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
+  const { width } = useWindowDimensions();
+  const wide = width >= WIDE_BREAKPOINT;
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -51,11 +62,95 @@ export function ConcernDetailScreen({ route }: Props) {
     }, [load]),
   );
 
-  if (loading) return <LoadingOverlay label="Loading report" />;
+  if (loading && !wide) return <LoadingOverlay label="Loading report" />;
   if (error) return <ErrorState error={error} onRetry={load} />;
-  if (!concern) return <ErrorState error={new Error("Report not found.")} />;
+  if (!concern) {
+    // Desktop first load: keep the sidebar and show its in-pane spinner.
+    if (loading) return <SidebarShell active="safety" loading>{null}</SidebarShell>;
+    return <ErrorState error={new Error("Report not found.")} />;
+  }
 
   const stepIndex = STEPS.findIndex((s) => s.key === concern.status);
+
+  const toldCard = (
+    <View style={[styles.card, wide && styles.cardDesk]}>
+      <Text style={styles.cardLabel}>What you told us</Text>
+      <Text style={styles.cardBody}>{concern.description}</Text>
+      {concern.location ? (
+        <View style={styles.metaRow}>
+          <Ionicons name="location-outline" size={13} color={COLORS.textMuted} />
+          <Text style={styles.metaText}>{concern.location}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+
+  const teamReply = concern.team_note ? (
+    <View style={[styles.card, styles.noteCard, wide && styles.cardDesk]}>
+      <View style={styles.noteHeader}>
+        <Ionicons name="shield-checkmark" size={14} color={COLORS.accent} />
+        <Text style={styles.noteLabel}>Update from the enquiry team</Text>
+      </View>
+      <Text style={styles.cardBody}>{concern.team_note}</Text>
+    </View>
+  ) : (
+    <Text style={[styles.waiting, wide && styles.waitingDesk]}>
+      No update yet — the enquiry team has been notified and will follow up with you directly.
+    </Text>
+  );
+
+  if (wide) {
+    return (
+      <DesktopPage
+        active="safety"
+        eyebrow="Campus safety · Your report"
+        title={concern.category_label}
+        subtitle={`Filed ${new Date(concern.created_at).toLocaleString()} · visible only to you and the enquiry team`}
+        main={
+          <>
+            {toldCard}
+            {teamReply}
+          </>
+        }
+        side={
+          <>
+            <DesktopCard>
+              <Text style={styles.cardLabel}>Status</Text>
+              {STEPS.map((step, i) => {
+                const done = i <= stepIndex;
+                return (
+                  <View key={step.key} style={styles.timelineRow}>
+                    <View style={styles.timelineRail}>
+                      <View style={[styles.timelineDot, done && styles.timelineDotDone]}>
+                        {done ? <Ionicons name="checkmark" size={11} color="#fff" /> : null}
+                      </View>
+                      {i < STEPS.length - 1 ? (
+                        <View style={[styles.timelineLine, i < stepIndex && styles.timelineLineDone]} />
+                      ) : null}
+                    </View>
+                    <Text style={[styles.timelineLabel, done && styles.timelineLabelDone]}>
+                      {step.label}
+                      {i === stepIndex ? "  ·  current" : ""}
+                    </Text>
+                  </View>
+                );
+              })}
+            </DesktopCard>
+            <DesktopCard>
+              <View style={styles.noteHeader}>
+                <Ionicons name="call-outline" size={14} color={COLORS.accent} />
+                <Text style={styles.noteLabel}>Need help right now?</Text>
+              </View>
+              <Text style={styles.metaText}>
+                Contact campus security or the police first. National Anti-Ragging Helpline:
+                1800-180-5522.
+              </Text>
+            </DesktopCard>
+          </>
+        }
+      />
+    );
+  }
 
   return (
     <ConnectionGate>
@@ -90,31 +185,8 @@ export function ConcernDetailScreen({ route }: Props) {
             ))}
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>What you told us</Text>
-            <Text style={styles.cardBody}>{concern.description}</Text>
-            {concern.location ? (
-              <View style={styles.metaRow}>
-                <Ionicons name="location-outline" size={13} color={COLORS.textMuted} />
-                <Text style={styles.metaText}>{concern.location}</Text>
-              </View>
-            ) : null}
-          </View>
-
-          {concern.team_note ? (
-            <View style={[styles.card, styles.noteCard]}>
-              <View style={styles.noteHeader}>
-                <Ionicons name="shield-checkmark" size={14} color={COLORS.accent} />
-                <Text style={styles.noteLabel}>Update from the enquiry team</Text>
-              </View>
-              <Text style={styles.cardBody}>{concern.team_note}</Text>
-            </View>
-          ) : (
-            <Text style={styles.waiting}>
-              No update yet — the enquiry team has been notified and will follow up with you
-              directly.
-            </Text>
-          )}
+          {toldCard}
+          {teamReply}
         </ScrollView>
       </View>
     </ConnectionGate>
@@ -196,6 +268,25 @@ const styles = StyleSheet.create({
   noteCard: { borderColor: "rgba(169,31,35,0.25)", backgroundColor: "rgba(169,31,35,0.04)" },
   noteHeader: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8 },
   noteLabel: { fontFamily: FONTS.sansBold, fontSize: 12, color: COLORS.accent },
+  cardDesk: { marginBottom: 0 },
+  waitingDesk: { textAlign: "left", marginTop: 0, paddingHorizontal: 4 },
+  timelineRow: { flexDirection: "row", gap: 10, minHeight: 34 },
+  timelineRail: { alignItems: "center", width: 20 },
+  timelineDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  timelineDotDone: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  timelineLine: { flex: 1, width: 2, backgroundColor: COLORS.border, marginVertical: 2 },
+  timelineLineDone: { backgroundColor: COLORS.primary },
+  timelineLabel: { fontFamily: FONTS.sansMedium, fontSize: 13, color: COLORS.textMuted, paddingTop: 1 },
+  timelineLabelDone: { color: COLORS.text, fontFamily: FONTS.sansSemi },
   waiting: {
     fontFamily: FONTS.sans,
     fontSize: 12,

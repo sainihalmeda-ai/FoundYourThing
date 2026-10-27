@@ -1,16 +1,33 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  Linking,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { fetchConcern, updateConcern } from "../api/auth";
 import { ConnectionBanner } from "../components/ConnectionBanner";
 import { ConnectionGate } from "../components/ConnectionGate";
+import { DesktopCard, DesktopPage } from "../components/DesktopPage";
+import { SidebarShell } from "../components/SidebarShell";
 import { AppButton, Chip, Field } from "../components/Ui";
 import { ErrorState, ValidationMessage } from "../components/states";
 import { LoadingOverlay } from "../components/LoadingOverlay";
 import { useAuth } from "../context/AuthContext";
-import { COLORS, CONTENT_MAX_WIDTH, FONTS, RADIUS, SHADOW } from "../constants/config";
+import {
+  COLORS,
+  CONTENT_MAX_WIDTH,
+  FONTS,
+  RADIUS,
+  SHADOW,
+  WIDE_BREAKPOINT,
+} from "../constants/config";
 import { RootStackParamList } from "../navigation/types";
 import { ApiError, type ConcernStatus, type ConcernTeamView } from "../types";
 
@@ -33,6 +50,8 @@ export function EnquiryConcernDetailScreen({ route }: Props) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const { width } = useWindowDimensions();
+  const wide = width >= WIDE_BREAKPOINT;
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -75,9 +94,116 @@ export function EnquiryConcernDetailScreen({ route }: Props) {
     }
   };
 
-  if (loading) return <LoadingOverlay label="Loading report" />;
+  if (loading && !wide) return <LoadingOverlay label="Loading report" />;
   if (error) return <ErrorState error={error} onRetry={load} />;
-  if (!concern) return <ErrorState error={new Error("Report not found.")} />;
+  if (!concern) {
+    // Desktop first load: keep the sidebar and show its in-pane spinner.
+    if (loading) return <SidebarShell active="safety" loading>{null}</SidebarShell>;
+    return <ErrorState error={new Error("Report not found.")} />;
+  }
+
+  const reporterCard = (
+    <View style={[styles.card, wide && styles.cardDesk]}>
+      <Text style={styles.cardLabel}>Reported by</Text>
+      <Text style={styles.reporterName}>{concern.reporter_name || concern.reporter_vtu_id}</Text>
+      <Text style={styles.reporterMeta}>
+        {concern.reporter_vtu_id}
+        {concern.reporter_department ? ` · ${concern.reporter_department}` : ""}
+      </Text>
+      {concern.reporter_phone ? (
+        <Pressable
+          style={styles.callBtn}
+          onPress={() => Linking.openURL(`tel:${concern.reporter_phone}`)}
+        >
+          <Ionicons name="call" size={14} color={COLORS.accent} />
+          <Text style={styles.callBtnText}>Call {concern.reporter_phone}</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+
+  const reportCard = (
+    <View style={[styles.card, wide && styles.cardDesk]}>
+      <Text style={styles.cardLabel}>What they reported</Text>
+      <Text style={styles.cardBody}>{concern.description}</Text>
+      {concern.location ? (
+        <View style={styles.metaRow}>
+          <Ionicons name="location-outline" size={13} color={COLORS.textMuted} />
+          <Text style={styles.metaText}>{concern.location}</Text>
+        </View>
+      ) : null}
+    </View>
+  );
+
+  const warning = (
+    <View style={[styles.warnCard, wide && styles.cardDesk]}>
+      <Ionicons name="alert-circle" size={16} color={COLORS.accent} />
+      <Text style={styles.warnText}>
+        This app never notifies anyone else automatically. Suspension notices, public
+        announcements, or any disciplinary action must go through the official Anti-Ragging
+        Committee / Dean of Student Affairs — outside this app.
+      </Text>
+    </View>
+  );
+
+  const triage = (
+    <>
+      <Text style={[styles.label, wide && styles.labelDesk]}>Status</Text>
+      <View style={styles.chips}>
+        {STATUS_OPTIONS.map((opt) => (
+          <Chip
+            key={opt.id}
+            label={opt.label}
+            active={status === opt.id}
+            onPress={() => setStatus(opt.id)}
+          />
+        ))}
+      </View>
+
+      <Field
+        label="Update for the reporter (optional)"
+        value={note}
+        onChangeText={setNote}
+        placeholder="A short, human update — what you found and what happens next…"
+        autoCapitalize="sentences"
+        multiline
+        numberOfLines={5}
+      />
+
+      <ValidationMessage message={saveError} />
+      {saved ? <Text style={styles.savedText}>Saved.</Text> : null}
+
+      <AppButton
+        label={saving ? "Saving…" : "Save"}
+        onPress={save}
+        disabled={saving}
+        loading={saving}
+      />
+    </>
+  );
+
+  if (wide) {
+    return (
+      <DesktopPage
+        active="safety"
+        eyebrow="Campus safety · Enquiry team"
+        title={concern.category_label}
+        subtitle={`Filed ${new Date(concern.created_at).toLocaleString()}`}
+        main={
+          <>
+            {reportCard}
+            {warning}
+          </>
+        }
+        side={
+          <>
+            {reporterCard}
+            <DesktopCard>{triage}</DesktopCard>
+          </>
+        }
+      />
+    );
+  }
 
   return (
     <ConnectionGate>
@@ -85,81 +211,11 @@ export function EnquiryConcernDetailScreen({ route }: Props) {
         <ConnectionBanner />
         <ScrollView contentContainerStyle={styles.scroll}>
           <Text style={styles.title}>{concern.category_label}</Text>
-          <Text style={styles.date}>
-            Filed {new Date(concern.created_at).toLocaleString()}
-          </Text>
-
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>Reported by</Text>
-            <Text style={styles.reporterName}>
-              {concern.reporter_name || concern.reporter_vtu_id}
-            </Text>
-            <Text style={styles.reporterMeta}>
-              {concern.reporter_vtu_id}
-              {concern.reporter_department ? ` · ${concern.reporter_department}` : ""}
-            </Text>
-            {concern.reporter_phone ? (
-              <Pressable
-                style={styles.callBtn}
-                onPress={() => Linking.openURL(`tel:${concern.reporter_phone}`)}
-              >
-                <Ionicons name="call" size={14} color={COLORS.accent} />
-                <Text style={styles.callBtnText}>Call {concern.reporter_phone}</Text>
-              </Pressable>
-            ) : null}
-          </View>
-
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>What they reported</Text>
-            <Text style={styles.cardBody}>{concern.description}</Text>
-            {concern.location ? (
-              <View style={styles.metaRow}>
-                <Ionicons name="location-outline" size={13} color={COLORS.textMuted} />
-                <Text style={styles.metaText}>{concern.location}</Text>
-              </View>
-            ) : null}
-          </View>
-
-          <View style={styles.warnCard}>
-            <Ionicons name="alert-circle" size={16} color={COLORS.accent} />
-            <Text style={styles.warnText}>
-              This app never notifies anyone else automatically. Suspension notices, public
-              announcements, or any disciplinary action must go through the official Anti-Ragging
-              Committee / Dean of Student Affairs — outside this app.
-            </Text>
-          </View>
-
-          <Text style={styles.label}>Status</Text>
-          <View style={styles.chips}>
-            {STATUS_OPTIONS.map((opt) => (
-              <Chip
-                key={opt.id}
-                label={opt.label}
-                active={status === opt.id}
-                onPress={() => setStatus(opt.id)}
-              />
-            ))}
-          </View>
-
-          <Field
-            label="Update for the reporter (optional)"
-            value={note}
-            onChangeText={setNote}
-            placeholder="A short, human update — what you found and what happens next…"
-            autoCapitalize="sentences"
-            multiline
-            numberOfLines={5}
-          />
-
-          <ValidationMessage message={saveError} />
-          {saved ? <Text style={styles.savedText}>Saved.</Text> : null}
-
-          <AppButton
-            label={saving ? "Saving…" : "Save"}
-            onPress={save}
-            disabled={saving}
-            loading={saving}
-          />
+          <Text style={styles.date}>Filed {new Date(concern.created_at).toLocaleString()}</Text>
+          {reporterCard}
+          {reportCard}
+          {warning}
+          {triage}
         </ScrollView>
       </View>
     </ConnectionGate>
@@ -228,6 +284,8 @@ const styles = StyleSheet.create({
     borderColor: "rgba(169,31,35,0.18)",
   },
   warnText: { flex: 1, fontFamily: FONTS.sansMedium, fontSize: 11.5, lineHeight: 17, color: COLORS.text },
+  cardDesk: { marginTop: 0 },
+  labelDesk: { marginTop: 0 },
   label: {
     fontSize: 13,
     fontFamily: FONTS.sansSemi,

@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -20,20 +21,39 @@ import {
 import { resolveImageUrl } from "../api/client";
 import { ConnectionBanner } from "../components/ConnectionBanner";
 import { ConnectionGate } from "../components/ConnectionGate";
+import { DesktopCard, DesktopPage } from "../components/DesktopPage";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingOverlay } from "../components/LoadingOverlay";
 import { MATCH_TONE_COLORS, MatchScore } from "../components/MatchScore";
 import { PhotoView } from "../components/PhotoView";
+import { SidebarShell } from "../components/SidebarShell";
 import { AppButton, Badge } from "../components/Ui";
 import { EmptyState, SuccessState } from "../components/states";
 import { useAuth } from "../context/AuthContext";
 import { matchConfidence } from "../lib/matchConfidence";
+import { timeAgo } from "../lib/timeAgo";
 import { RootStackParamList } from "../navigation/types";
-import { COLORS, CONTENT_MAX_WIDTH, FONTS, RADIUS, SHADOW } from "../constants/config";
+import {
+  COLORS,
+  CONTENT_MAX_WIDTH,
+  FONTS,
+  RADIUS,
+  SHADOW,
+  WIDE_BREAKPOINT,
+} from "../constants/config";
 import type { Item, MatchResult } from "../types";
 import { ApiError } from "../types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "ItemDetail">;
+
+const STATUS_LABEL: Record<string, string> = {
+  open: "Open",
+  matched: "Possible match found",
+  claim_pending: "Claim pending",
+  connected: "Owner and finder connected",
+  recovered: "Returned to owner",
+  closed: "Closed",
+};
 
 function maskPhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
@@ -55,6 +75,8 @@ export function ItemDetailScreen({ route, navigation }: Props) {
   const [recovered, setRecovered] = useState(false);
   const [showPhone, setShowPhone] = useState(false);
   const [revealPhone, setRevealPhone] = useState(false);
+  const { width } = useWindowDimensions();
+  const wide = width >= WIDE_BREAKPOINT;
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -126,28 +148,40 @@ export function ItemDetailScreen({ route, navigation }: Props) {
     }
   };
 
-  if (loading) {
+  if (loading && !wide) {
     return (
       <LoadingOverlay label="Loading item" hint="Pulling details and possible matches…" />
     );
   }
-  if (error || !item) {
+  if (error || (!item && !loading)) {
     return <ErrorState error={error ?? new Error("Item not found")} onRetry={load} />;
   }
 
+  /** Desktop keeps the sidebar around full-page states too. */
+  const page = (node: React.ReactNode) =>
+    wide ? (
+      <SidebarShell active="feed" loading={loading && !item}>
+        {node}
+      </SidebarShell>
+    ) : (
+      <>{node}</>
+    );
+
+  if (!item) return page(null); // Desktop first load — SidebarShell shows its spinner.
+
   if (claimSuccess) {
-    return (
+    return page(
       <SuccessState
         title="Request sent"
         message="The finder will only see your VTU ID and masked name until they accept. Phone stays hidden until then."
         actionLabel="Back to item"
         onAction={() => setClaimSuccess(false)}
-      />
+      />,
     );
   }
 
   if (reopened) {
-    return (
+    return page(
       <SuccessState
         title="Reports reopened"
         message="Both items are live on the campus feed again so other matches can appear."
@@ -155,18 +189,18 @@ export function ItemDetailScreen({ route, navigation }: Props) {
         onAction={() => navigation.navigate("MainTabs", { screen: "FeedTab" })}
         secondaryLabel="Stay on item"
         onSecondary={() => setReopened(false)}
-      />
+      />,
     );
   }
 
   if (recovered) {
-    return (
+    return page(
       <SuccessState
         title="Marked returned"
         message="Claim status is done. Contact details are hidden again. Found report stays as campus trust history."
         actionLabel="Back to feed"
         onAction={() => navigation.navigate("MainTabs", { screen: "FeedTab" })}
-      />
+      />,
     );
   }
 
@@ -184,23 +218,291 @@ export function ItemDetailScreen({ route, navigation }: Props) {
   const unlockedPhone =
     !itemReturned && (item.reporter_phone || matches.some((m) => m.counterparty.phone && m.claim_status === "accepted"));
 
+  // ---- Page pieces, arranged below as one column (phone) or two (desktop) ----
+
+  const badges = (
+    <View style={styles.badgeRow}>
+      <Badge label={item.item_type === "lost" ? "Lost" : "Found"} tone={item.item_type} />
+      {itemReturned ? <Badge label="Returned" tone="returned" /> : null}
+      {item.status === "connected" ? <Badge label="Connected" tone="connected" /> : null}
+      {item.is_urgent && !itemReturned ? <Badge label="Urgent" tone="urgent" /> : null}
+      {isOwner ? <Badge label="Yours" tone="mine" /> : null}
+    </View>
+  );
+
+  const heroPhoto = (style: object) => (
+    <PhotoView
+      uri={resolveImageUrl(item.image_url)}
+      style={style}
+      fallbackLabel={item.title}
+      fallbackHint={`${item.category_label} · ${item.location} — identify from details below`}
+    />
+  );
+
+  const returnedNote = itemReturned ? (
+    <View style={styles.returnedNote}>
+      <Ionicons name="shield-checkmark" size={16} color={COLORS.success} />
+      <Text style={styles.returnedText}>
+        Returned to owner. Contact details are hidden — kept as trust history.
+      </Text>
+    </View>
+  ) : null;
+
+  const reporterPhone =
+    !itemReturned && item.reporter_phone ? (
+      <Pressable
+        style={styles.phoneCard}
+        onPress={() => {
+          setShowPhone(true);
+          setRevealPhone(true);
+        }}
+      >
+        <Ionicons name="call" size={18} color={COLORS.accent} />
+        <View style={{ flex: 1 }}>
+          <Text style={styles.phoneLabel}>Contact unlocked</Text>
+          <Text style={styles.phoneValue}>
+            {revealPhone ? item.reporter_phone : maskPhone(item.reporter_phone)}
+          </Text>
+        </View>
+        <Text style={styles.reveal}>{revealPhone ? "Hide" : "Show"}</Text>
+      </Pressable>
+    ) : null;
+
+  const description = (
+    <Text style={styles.description}>{item.description || "No extra details provided."}</Text>
+  );
+
+  const raiseBoxes = (
+    <>
+      {canRaiseFromFound ? (
+        <View style={styles.raiseBox}>
+          <Text style={[styles.sectionTitle, styles.raiseTitle]}>Looks familiar?</Text>
+          <Text style={styles.hint}>
+            Raise a lost claim with your photo. The finder will compare both images.
+          </Text>
+          <AppButton
+            label="This looks like mine — raise claim"
+            onPress={() => navigation.navigate("Report", { mode: "lost", linkFoundId: item.id })}
+          />
+        </View>
+      ) : null}
+      {canAnswerLost ? (
+        <View style={styles.raiseBox}>
+          <Text style={[styles.sectionTitle, styles.raiseTitle]}>Did you pick this up?</Text>
+          <Text style={styles.hint}>
+            Post a found report with your photo. The owner compares both images and decides —
+            your phone number stays hidden until they accept.
+          </Text>
+          <AppButton
+            label="Looks like I found it — raise found report"
+            onPress={() => navigation.navigate("Report", { mode: "found", linkLostId: item.id })}
+          />
+        </View>
+      ) : null}
+    </>
+  );
+
+  const matchList =
+    matches.length === 0 ? (
+      <EmptyState
+        title="No strong matches yet"
+        message="Check back when more lost or found reports arrive on campus."
+        compact
+      />
+    ) : (
+      matches.map((match) => {
+        const canRequest = item.item_type === "lost" && isOwner && !match.claim_status;
+        const showResolve = match.claim_status === "accepted" && Boolean(match.claim_id);
+        const isDone = match.claim_status === "done";
+        const phoneOk = Boolean(match.counterparty.phone) && !isDone && !itemReturned;
+        const palette = MATCH_TONE_COLORS[matchConfidence(match.combined_score).tone];
+
+        return (
+          <View key={match.id} style={styles.matchCard}>
+            <View style={styles.scoreRow}>
+              <View
+                style={[
+                  styles.scoreRing,
+                  { backgroundColor: palette.background, borderColor: palette.text },
+                ]}
+              >
+                <Text style={[styles.scoreNum, { color: palette.text }]}>
+                  {Math.round(match.combined_score)}
+                </Text>
+                <Text style={[styles.scorePct, { color: palette.text }]}>%</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.matchTitle}>{match.counterparty_item.title}</Text>
+                <Text style={styles.meta}>Other party · {match.counterparty.vtu_id}</Text>
+                {match.counterparty.full_name ? (
+                  <Text style={styles.meta}>Name · {match.counterparty.full_name}</Text>
+                ) : null}
+              </View>
+            </View>
+            <MatchScore percent={match.combined_score} />
+
+            {phoneOk ? (
+              <Pressable
+                style={styles.phoneCard}
+                onPress={() => {
+                  setShowPhone(true);
+                  setRevealPhone(true);
+                }}
+              >
+                <Ionicons name="call" size={18} color={COLORS.accent} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.phoneLabel}>Contact unlocked</Text>
+                  <Text style={styles.phoneValue}>
+                    {revealPhone ? match.counterparty.phone : maskPhone(match.counterparty.phone!)}
+                  </Text>
+                </View>
+              </Pressable>
+            ) : null}
+
+            {canRequest ? (
+              <AppButton
+                label={claimingId === match.id ? "Sending..." : "This is mine — request contact"}
+                onPress={() => requestClaim(match.id)}
+                disabled={claimingId === match.id}
+                loading={claimingId === match.id}
+                style={{ marginTop: 10 }}
+              />
+            ) : null}
+            {match.claim_status && !isDone ? (
+              <Text style={styles.claimStatus}>Claim · {match.claim_status}</Text>
+            ) : null}
+            {isDone ? <Text style={styles.doneStatus}>Done — item returned</Text> : null}
+            {showResolve ? (
+              <View style={styles.resolveBox}>
+                <Text style={styles.resolveTitle}>Met in person?</Text>
+                <Text style={styles.hint}>
+                  Mark returned to hide contact again. Lost report closes; found stays as history.
+                </Text>
+                <AppButton
+                  label={actionBusy ? "Working..." : "Same item — mark returned"}
+                  onPress={() => onRecovered(match.claim_id!)}
+                  disabled={actionBusy}
+                  variant="gold"
+                />
+                <AppButton
+                  label="Not the same — reopen"
+                  onPress={() => onMismatch(match.claim_id!)}
+                  variant="ghost"
+                  style={{ marginTop: 8 }}
+                />
+              </View>
+            ) : null}
+          </View>
+        );
+      })
+    );
+
+  const phoneModal = (
+    <Modal visible={showPhone && Boolean(unlockedPhone)} transparent animationType="fade">
+      <Pressable style={styles.modalBackdrop} onPress={() => setShowPhone(false)}>
+        <View style={styles.modalCard}>
+          <Ionicons name="checkmark-circle" size={28} color={COLORS.gold} />
+          <Text style={styles.modalTitle}>Contact unlocked</Text>
+          <Text style={styles.modalBody}>Please meet on campus to complete the handover.</Text>
+          <AppButton label="Got it" onPress={() => setShowPhone(false)} />
+        </View>
+      </Pressable>
+    </Modal>
+  );
+
+  if (wide) {
+    const facts: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }[] = [
+      { icon: "pricetag-outline", label: "Category", value: item.category_label },
+      { icon: "location-outline", label: "Location", value: item.location },
+      { icon: "pulse-outline", label: "Status", value: STATUS_LABEL[item.status] ?? item.status },
+      {
+        icon: "person-outline",
+        label: "Reported by",
+        value: item.reporter_name
+          ? `${item.reporter_name} · ${item.reporter_vtu_id}`
+          : item.reporter_vtu_id,
+      },
+      {
+        icon: "calendar-outline",
+        label: "Posted",
+        value: `${new Date(item.created_at).toLocaleDateString()} · ${timeAgo(item.created_at)}`,
+      },
+      {
+        icon: "sparkles-outline",
+        label: "AI matches",
+        value: matches.length === 1 ? "1 possible match" : `${matches.length} possible matches`,
+      },
+    ];
+
+    return (
+      <DesktopPage
+        active="feed"
+        eyebrow={`Lost & Found · ${item.item_type === "lost" ? "Lost" : "Found"} item`}
+        title={item.title}
+        subtitle={`${item.category_label} · ${item.location} · posted ${timeAgo(item.created_at).toLowerCase()}`}
+        headerRight={badges}
+        sideWidth={420}
+        overlay={phoneModal}
+        main={
+          <>
+            <DesktopCard>{heroPhoto(styles.deskPhoto)}</DesktopCard>
+            <DesktopCard>
+              <Text style={styles.deskCardTitle}>Details</Text>
+              <View style={styles.factGrid}>
+                {facts.map((f) => (
+                  <View key={f.label} style={styles.fact}>
+                    <View style={styles.factIcon}>
+                      <Ionicons name={f.icon} size={15} color={COLORS.primary} />
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={styles.factLabel}>{f.label}</Text>
+                      <Text style={styles.factValue} numberOfLines={2}>
+                        {f.value}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+              <Text style={styles.factLabel}>Description</Text>
+              {description}
+              {returnedNote}
+              {reporterPhone}
+            </DesktopCard>
+          </>
+        }
+        side={
+          <>
+            {raiseBoxes}
+            <DesktopCard>
+              <View style={styles.matchHeader}>
+                <Text style={styles.deskCardTitle}>AI possible matches</Text>
+                <View style={styles.countPill}>
+                  <Text style={styles.countPillText}>{matches.length}</Text>
+                </View>
+              </View>
+              {matchList}
+            </DesktopCard>
+            <View style={styles.privacyCard}>
+              <Ionicons name="lock-closed-outline" size={15} color={COLORS.primary} />
+              <Text style={styles.privacyText}>
+                Only VTU IDs are shown here. Phone numbers are shared only after the finder
+                accepts a request, and hidden again once the item is returned.
+              </Text>
+            </View>
+          </>
+        }
+      />
+    );
+  }
+
   return (
     <ConnectionGate>
       <View style={styles.root}>
         <ConnectionBanner />
         <ScrollView contentContainerStyle={styles.scroll}>
-          <PhotoView
-            uri={resolveImageUrl(item.image_url)}
-            style={styles.hero}
-            fallbackLabel={item.title}
-            fallbackHint={`${item.category_label} · ${item.location} — identify from details below`}
-          />
+          {heroPhoto(styles.hero)}
           <View style={styles.sheet}>
-            <View style={styles.badgeRow}>
-              <Badge label={item.item_type === "lost" ? "Lost" : "Found"} tone={item.item_type} />
-              {itemReturned ? <Badge label="Returned" tone="returned" /> : null}
-              {item.status === "connected" ? <Badge label="Connected" tone="connected" /> : null}
-            </View>
+            {badges}
             <Text style={styles.title}>{item.title}</Text>
             <View style={styles.metaRow}>
               <Ionicons name="location-outline" size={14} color={COLORS.textMuted} />
@@ -214,193 +516,15 @@ export function ItemDetailScreen({ route, navigation }: Props) {
             {item.reporter_name ? (
               <Text style={styles.meta}>Name · {item.reporter_name}</Text>
             ) : null}
-
-            {itemReturned ? (
-              <View style={styles.returnedNote}>
-                <Ionicons name="shield-checkmark" size={16} color={COLORS.success} />
-                <Text style={styles.returnedText}>
-                  Returned to owner. Contact details are hidden — kept as trust history.
-                </Text>
-              </View>
-            ) : null}
-
-            {!itemReturned && item.reporter_phone ? (
-              <Pressable
-                style={styles.phoneCard}
-                onPress={() => {
-                  setShowPhone(true);
-                  setRevealPhone(true);
-                }}
-              >
-                <Ionicons name="call" size={18} color={COLORS.accent} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.phoneLabel}>Contact unlocked</Text>
-                  <Text style={styles.phoneValue}>
-                    {revealPhone ? item.reporter_phone : maskPhone(item.reporter_phone)}
-                  </Text>
-                </View>
-                <Text style={styles.reveal}>{revealPhone ? "Hide" : "Show"}</Text>
-              </Pressable>
-            ) : null}
-
-            <Text style={styles.description}>{item.description || "No extra details provided."}</Text>
-
-            {canRaiseFromFound ? (
-              <View style={styles.raiseBox}>
-                <Text style={styles.sectionTitle}>Looks familiar?</Text>
-                <Text style={styles.hint}>
-                  Raise a lost claim with your photo. The finder will compare both images.
-                </Text>
-                <AppButton
-                  label="This looks like mine — raise claim"
-                  onPress={() =>
-                    navigation.navigate("Report", {
-                      mode: "lost",
-                      linkFoundId: item.id,
-                    })
-                  }
-                />
-              </View>
-            ) : null}
-
-            {canAnswerLost ? (
-              <View style={styles.raiseBox}>
-                <Text style={styles.sectionTitle}>Did you pick this up?</Text>
-                <Text style={styles.hint}>
-                  Post a found report with your photo. The owner compares both images and
-                  decides — your phone number stays hidden until they accept.
-                </Text>
-                <AppButton
-                  label="Looks like I found it — raise found report"
-                  onPress={() =>
-                    navigation.navigate("Report", {
-                      mode: "found",
-                      linkLostId: item.id,
-                    })
-                  }
-                />
-              </View>
-            ) : null}
-
+            {returnedNote}
+            {reporterPhone}
+            {description}
+            {raiseBoxes}
             <Text style={styles.sectionTitle}>AI possible matches</Text>
-            {matches.length === 0 ? (
-              <EmptyState
-                title="No strong matches yet"
-                message="Check back when more lost or found reports arrive on campus."
-                compact
-              />
-            ) : (
-              matches.map((match) => {
-                const canRequest =
-                  item.item_type === "lost" && isOwner && !match.claim_status;
-                const showResolve =
-                  match.claim_status === "accepted" && Boolean(match.claim_id);
-                const isDone = match.claim_status === "done";
-                const phoneOk =
-                  Boolean(match.counterparty.phone) && !isDone && !itemReturned;
-                const palette =
-                  MATCH_TONE_COLORS[matchConfidence(match.combined_score).tone];
-
-                return (
-                  <View key={match.id} style={styles.matchCard}>
-                    <View style={styles.scoreRow}>
-                      <View
-                        style={[
-                          styles.scoreRing,
-                          { backgroundColor: palette.background, borderColor: palette.text },
-                        ]}
-                      >
-                        <Text style={[styles.scoreNum, { color: palette.text }]}>
-                          {Math.round(match.combined_score)}
-                        </Text>
-                        <Text style={[styles.scorePct, { color: palette.text }]}>%</Text>
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.matchTitle}>{match.counterparty_item.title}</Text>
-                        <Text style={styles.meta}>Other party · {match.counterparty.vtu_id}</Text>
-                        {match.counterparty.full_name ? (
-                          <Text style={styles.meta}>Name · {match.counterparty.full_name}</Text>
-                        ) : null}
-                      </View>
-                    </View>
-                    <MatchScore percent={match.combined_score} />
-
-                    {phoneOk ? (
-                      <Pressable
-                        style={styles.phoneCard}
-                        onPress={() => {
-                          setShowPhone(true);
-                          setRevealPhone(true);
-                        }}
-                      >
-                        <Ionicons name="call" size={18} color={COLORS.accent} />
-                        <View style={{ flex: 1 }}>
-                          <Text style={styles.phoneLabel}>Contact unlocked</Text>
-                          <Text style={styles.phoneValue}>
-                            {revealPhone
-                              ? match.counterparty.phone
-                              : maskPhone(match.counterparty.phone!)}
-                          </Text>
-                        </View>
-                      </Pressable>
-                    ) : null}
-
-                    {canRequest ? (
-                      <AppButton
-                        label={
-                          claimingId === match.id
-                            ? "Sending..."
-                            : "This is mine — request contact"
-                        }
-                        onPress={() => requestClaim(match.id)}
-                        disabled={claimingId === match.id}
-                        loading={claimingId === match.id}
-                        style={{ marginTop: 10 }}
-                      />
-                    ) : null}
-                    {match.claim_status && !isDone ? (
-                      <Text style={styles.claimStatus}>Claim · {match.claim_status}</Text>
-                    ) : null}
-                    {isDone ? (
-                      <Text style={styles.doneStatus}>Done — item returned</Text>
-                    ) : null}
-                    {showResolve ? (
-                      <View style={styles.resolveBox}>
-                        <Text style={styles.resolveTitle}>Met in person?</Text>
-                        <Text style={styles.hint}>
-                          Mark returned to hide contact again. Lost report closes; found stays as history.
-                        </Text>
-                        <AppButton
-                          label={actionBusy ? "Working..." : "Same item — mark returned"}
-                          onPress={() => onRecovered(match.claim_id!)}
-                          disabled={actionBusy}
-                          variant="gold"
-                        />
-                        <AppButton
-                          label="Not the same — reopen"
-                          onPress={() => onMismatch(match.claim_id!)}
-                          variant="ghost"
-                          style={{ marginTop: 8 }}
-                        />
-                      </View>
-                    ) : null}
-                  </View>
-                );
-              })
-            )}
+            {matchList}
           </View>
         </ScrollView>
-
-        <Modal visible={showPhone && Boolean(unlockedPhone)} transparent animationType="fade">
-          <Pressable style={styles.modalBackdrop} onPress={() => setShowPhone(false)}>
-            <View style={styles.modalCard}>
-              <Ionicons name="checkmark-circle" size={28} color={COLORS.gold} />
-              <Text style={styles.modalTitle}>Contact unlocked</Text>
-              <Text style={styles.modalBody}>Please meet on campus to complete the handover.</Text>
-              <AppButton label="Got it" onPress={() => setShowPhone(false)} />
-            </View>
-          </Pressable>
-        </Modal>
+        {phoneModal}
       </View>
     </ConnectionGate>
   );
@@ -408,6 +532,63 @@ export function ItemDetailScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
+  deskCardTitle: { fontFamily: FONTS.displayMedium, fontSize: 17, color: COLORS.text },
+  deskPhoto: { width: "100%", height: 340, borderRadius: RADIUS.lg },
+  factGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginTop: 12, marginBottom: 16 },
+  fact: {
+    width: "31.5%",
+    flexGrow: 1,
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "flex-start",
+    padding: 10,
+    borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.surface,
+    borderWidth: 1,
+    borderColor: COLORS.divider,
+  },
+  factIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 9,
+    backgroundColor: COLORS.surfaceMuted,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  factLabel: {
+    fontFamily: FONTS.sansBold,
+    fontSize: 10.5,
+    color: COLORS.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+  },
+  factValue: { marginTop: 2, fontFamily: FONTS.sansSemi, fontSize: 13, color: COLORS.text },
+  matchHeader: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
+  countPill: {
+    minWidth: 24,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 12,
+    backgroundColor: COLORS.primary,
+    alignItems: "center",
+  },
+  countPillText: { fontFamily: FONTS.sansBold, fontSize: 11.5, color: "#fff" },
+  privacyCard: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "flex-start",
+    padding: 14,
+    borderRadius: RADIUS.xl,
+    backgroundColor: COLORS.surfaceMuted,
+  },
+  privacyText: {
+    flex: 1,
+    fontFamily: FONTS.sans,
+    fontSize: 12,
+    lineHeight: 18,
+    color: COLORS.textMuted,
+  },
+  raiseTitle: { marginTop: 0 },
   scroll: {
     paddingBottom: 40,
     width: "100%",

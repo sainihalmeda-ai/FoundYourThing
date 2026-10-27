@@ -1,8 +1,16 @@
 import React from "react";
-import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { ConnectionBanner } from "../components/ConnectionBanner";
-import { COLORS, CONTENT_MAX_WIDTH, FONTS, RADIUS, SHADOW } from "../constants/config";
+import { DesktopPage } from "../components/DesktopPage";
+import {
+  COLORS,
+  CONTENT_MAX_WIDTH,
+  FONTS,
+  RADIUS,
+  SHADOW,
+  WIDE_BREAKPOINT,
+} from "../constants/config";
 
 type Section = {
   icon: React.ComponentProps<typeof Ionicons>["name"];
@@ -43,7 +51,52 @@ const SECTIONS: Section[] = [
   },
 ];
 
+const INTRO =
+  "A privacy-first campus lost & found platform, proposed as a pilot for Vel Tech Rangarajan Dr. Sagunthala R&D Institute of Science and Technology, Avadi, Chennai.";
+const CREDIT = "Built by Meda Sai Nihal, CSE (AI & Data Science) · FoundYourThing 2026";
+
+function SectionCard({ section, style }: { section: Section; style?: object }) {
+  return (
+    <View style={[styles.card, style]}>
+      <View style={styles.cardHeader}>
+        <View style={styles.iconWrap}>
+          <Ionicons name={section.icon} size={16} color={COLORS.accent} />
+        </View>
+        <Text style={styles.cardTitle}>{section.title}</Text>
+      </View>
+      <Text style={styles.cardBody}>{section.body}</Text>
+    </View>
+  );
+}
+
 export function AboutScreen() {
+  const { width } = useWindowDimensions();
+
+  if (width >= WIDE_BREAKPOINT) {
+    return (
+      <DesktopPage
+        active="about"
+        eyebrow="About & privacy"
+        title="About FoundYourThing"
+        subtitle={INTRO}
+        headerRight={
+          <Image
+            source={require("../../assets/veltech-logo.png")}
+            style={styles.uniLogo}
+            resizeMode="contain"
+          />
+        }
+      >
+        <View style={styles.deskGrid}>
+          {SECTIONS.map((section) => (
+            <SectionCard key={section.title} section={section} style={styles.deskCard} />
+          ))}
+        </View>
+        <Text style={[styles.footerText, styles.deskFooter]}>{CREDIT}</Text>
+      </DesktopPage>
+    );
+  }
+
   return (
     <View style={styles.root}>
       <ConnectionBanner />
@@ -56,27 +109,14 @@ export function AboutScreen() {
           />
         </View>
         <Text style={styles.title}>About FoundYourThing</Text>
-        <Text style={styles.subtitle}>
-          A privacy-first campus lost & found platform, proposed as a pilot for Vel Tech
-          Rangarajan Dr. Sagunthala R&D Institute of Science and Technology, Avadi, Chennai.
-        </Text>
+        <Text style={styles.subtitle}>{INTRO}</Text>
 
         {SECTIONS.map((section) => (
-          <View key={section.title} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={styles.iconWrap}>
-                <Ionicons name={section.icon} size={16} color={COLORS.accent} />
-              </View>
-              <Text style={styles.cardTitle}>{section.title}</Text>
-            </View>
-            <Text style={styles.cardBody}>{section.body}</Text>
-          </View>
+          <SectionCard key={section.title} section={section} />
         ))}
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>
-            Built by Meda Sai Nihal, CSE (AI & Data Science) · FoundYourThing 2026
-          </Text>
+          <Text style={styles.footerText}>{CREDIT}</Text>
         </View>
       </ScrollView>
     </View>
@@ -85,6 +125,10 @@ export function AboutScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
+  deskGrid: { flexDirection: "row", flexWrap: "wrap", gap: 16 },
+  // Three per row; the last row's cards stretch to fill it.
+  deskCard: { width: "31%", flexGrow: 1, marginBottom: 0, padding: 20 },
+  deskFooter: { marginTop: 20, textAlign: "center" },
   scroll: {
     padding: 20,
     paddingBottom: 48,
