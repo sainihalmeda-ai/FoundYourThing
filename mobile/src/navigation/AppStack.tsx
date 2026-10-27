@@ -16,6 +16,10 @@ import { EnquiryConcernDetailScreen } from "../screens/EnquiryConcernDetailScree
 import { EnquiryInboxScreen } from "../screens/EnquiryInboxScreen";
 import { FeedScreen } from "../screens/FeedScreen";
 import { HomeScreen } from "../screens/HomeScreen";
+import { HostelComplaintDetailScreen } from "../screens/HostelComplaintDetailScreen";
+import { HostelComplaintFormScreen } from "../screens/HostelComplaintFormScreen";
+import { HostelInboxScreen } from "../screens/HostelInboxScreen";
+import { HostelScreen } from "../screens/HostelScreen";
 import { ProfileScreen } from "../screens/ProfileScreen";
 import { ItemDetailScreen } from "../screens/ItemDetailScreen";
 import { ReportConcernScreen } from "../screens/ReportConcernScreen";
@@ -225,6 +229,31 @@ export function AppStack() {
         name="EnquiryConcernDetail"
         component={EnquiryConcernDetailScreen}
         options={{ title: "Report detail" }}
+      />
+      <Stack.Screen
+        name="Hostel"
+        component={HostelScreen}
+        // A sidebar page on desktop, same as Safety above.
+        options={{
+          title: "Hostel complaints",
+          headerShown: !wide,
+          animation: wide ? "none" : "slide_from_right",
+        }}
+      />
+      <Stack.Screen
+        name="HostelComplaintNew"
+        component={HostelComplaintFormScreen}
+        options={{ title: "New complaint" }}
+      />
+      <Stack.Screen
+        name="HostelComplaintDetail"
+        component={HostelComplaintDetailScreen}
+        options={{ title: "Complaint" }}
+      />
+      <Stack.Screen
+        name="HostelInbox"
+        component={HostelInboxScreen}
+        options={{ title: "Hostel office inbox" }}
       />
     </Stack.Navigator>
   );

@@ -223,6 +223,53 @@ class TeamAccess(BaseModel):
     is_enquiry_team: bool
 
 
+class HostelOption(BaseModel):
+    id: str
+    label: str
+    blocks: list[str]
+
+
+class HostelComplaintOptions(BaseModel):
+    hostels: list[HostelOption]
+    categories: list[dict[str, str]]
+    min_words: int
+    max_words: int
+    is_hostel_staff: bool
+
+
+class HostelComplaintPublic(BaseModel):
+    """What the student sees about their own complaint."""
+
+    id: int
+    hostel: str
+    hostel_label: str
+    block: str
+    room: str
+    category: str
+    category_label: str
+    description: str
+    word_count: int
+    attachment_url: str
+    status: str
+    staff_note: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class HostelComplaintStaffView(HostelComplaintPublic):
+    """Hostel-staff view — adds who filed it so they can follow up."""
+
+    reporter_vtu_id: str
+    reporter_name: str | None = None
+    reporter_phone: str | None = None
+    reporter_department: str | None = None
+
+
+class HostelComplaintStatusUpdate(BaseModel):
+    status: Literal["received", "in_progress", "resolved"]
+    staff_note: str = Field(default="", max_length=2000)
+
+
 class HealthResponse(BaseModel):
     status: str
     message: str

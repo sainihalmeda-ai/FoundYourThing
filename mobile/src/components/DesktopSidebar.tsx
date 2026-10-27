@@ -7,14 +7,29 @@ import { navigate } from "../navigation/navigationRef";
 import { UserAvatarPlaceholder } from "./UserAvatarPlaceholder";
 import { COLORS, FONTS } from "../constants/config";
 
-export type SidebarSection = "home" | "feed" | "claims" | "profile" | "safety" | "about";
+export type SidebarSection =
+  | "home"
+  | "feed"
+  | "claims"
+  | "profile"
+  | "safety"
+  | "hostel"
+  | "about";
+
+type NavGroup = "lost-found" | "safety" | "hostel";
+
+const NAV_GROUPS: { key: NavGroup; label: string }[] = [
+  { key: "lost-found", label: "Lost & Found" },
+  { key: "safety", label: "Campus safety" },
+  { key: "hostel", label: "Hostel" },
+];
 
 const NAV_ITEMS: {
   key: SidebarSection;
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
   go: () => void;
-  group: "lost-found" | "safety";
+  group: NavGroup;
 }[] = [
   {
     key: "home",
@@ -51,6 +66,13 @@ const NAV_ITEMS: {
     go: () => navigate("Safety"),
     group: "safety",
   },
+  {
+    key: "hostel",
+    label: "Hostel complaints",
+    icon: "bed-outline",
+    go: () => navigate("Hostel"),
+    group: "hostel",
+  },
 ];
 
 /** Persistent left nav shown on wide (desktop-width) screens in place of the bottom tab bar. */
@@ -75,27 +97,20 @@ export function DesktopSidebar({
         <Text style={styles.brandName}>FoundYourThing</Text>
       </View>
 
-      <Text style={styles.groupLabel}>Lost &amp; Found</Text>
-      {NAV_ITEMS.filter((i) => i.group === "lost-found").map((item) => (
-        <SidebarItem
-          key={item.key}
-          label={item.label}
-          icon={item.icon}
-          active={active === item.key}
-          onPress={item.go}
-          badge={item.key === "claims" && pendingCount > 0 ? pendingCount : undefined}
-        />
-      ))}
-
-      <Text style={[styles.groupLabel, { marginTop: 20 }]}>Campus safety</Text>
-      {NAV_ITEMS.filter((i) => i.group === "safety").map((item) => (
-        <SidebarItem
-          key={item.key}
-          label={item.label}
-          icon={item.icon}
-          active={active === item.key}
-          onPress={item.go}
-        />
+      {NAV_GROUPS.map((group, index) => (
+        <React.Fragment key={group.key}>
+          <Text style={[styles.groupLabel, index > 0 && { marginTop: 20 }]}>{group.label}</Text>
+          {NAV_ITEMS.filter((i) => i.group === group.key).map((item) => (
+            <SidebarItem
+              key={item.key}
+              label={item.label}
+              icon={item.icon}
+              active={active === item.key}
+              onPress={item.go}
+              badge={item.key === "claims" && pendingCount > 0 ? pendingCount : undefined}
+            />
+          ))}
+        </React.Fragment>
       ))}
 
       <View style={{ flex: 1 }} />

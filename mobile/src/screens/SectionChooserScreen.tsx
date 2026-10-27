@@ -87,10 +87,37 @@ export function SectionChooserScreen() {
             </View>
           </View>
         </PressScale>
+
+        <PressScale
+          style={[styles.tile, styles.tileHostel]}
+          onPress={() => navigation.navigate("Hostel")}
+          accessibilityRole="button"
+          accessibilityLabel="Hostel complaints"
+        >
+          <View style={styles.tileFill}>
+            <View style={[styles.tileIcon, styles.tileIconHostel]}>
+              <Ionicons name="bed-outline" size={26} color={HOSTEL_TINT} />
+            </View>
+            <Text style={styles.tileTitle}>Hostel Complaints</Text>
+            <Text style={styles.tileSub}>
+              Report plumbing, food, electrical or room problems in your hostel
+            </Text>
+            <View style={[styles.tileArrow, styles.tileArrowSafety]}>
+              <Ionicons
+                name="arrow-up"
+                size={16}
+                color={HOSTEL_TINT}
+                style={{ transform: [{ rotate: "45deg" }] }}
+              />
+            </View>
+          </View>
+        </PressScale>
       </View>
     </View>
   );
 }
+
+const HOSTEL_TINT = "#2C7A7B";
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
@@ -140,9 +167,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
+  tileHostel: {
+    backgroundColor: "#F1F8F8",
+    borderWidth: 1,
+    borderColor: "#CFE6E6",
+  },
   tileFill: {
     flex: 1,
-    padding: 24,
+    padding: 20,
     justifyContent: "center",
   },
   tileIcon: {
@@ -152,10 +184,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255,255,255,.14)",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 16,
+    marginBottom: 12,
   },
   tileIconSafety: {
     backgroundColor: "rgba(169,31,35,0.08)",
+  },
+  tileIconHostel: {
+    backgroundColor: "rgba(44,122,123,0.12)",
   },
   tileTitleInk: {
     fontFamily: FONTS.display,

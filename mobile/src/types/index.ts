@@ -84,6 +84,38 @@ export type ConcernTeamView = Concern & {
   reporter_department?: string | null;
 };
 
+export type HostelComplaintStatus = "received" | "in_progress" | "resolved";
+
+export type HostelComplaintOptions = {
+  hostels: { id: string; label: string; blocks: string[] }[];
+  categories: { id: string; label: string }[];
+  min_words: number;
+  max_words: number;
+  is_hostel_staff: boolean;
+};
+
+export type HostelComplaint = {
+  id: number;
+  hostel: string;
+  hostel_label: string;
+  block: string;
+  room: string;
+  category: string;
+  category_label: string;
+  description: string;
+  word_count: number;
+  attachment_url: string;
+  status: HostelComplaintStatus;
+  staff_note: string;
+  created_at: string;
+  updated_at: string;
+  /** Present on every detail/staff response; hidden from the student's own list UI. */
+  reporter_vtu_id?: string;
+  reporter_name?: string | null;
+  reporter_phone?: string | null;
+  reporter_department?: string | null;
+};
+
 export type ApiErrorKind =
   | "offline"
   | "timeout"

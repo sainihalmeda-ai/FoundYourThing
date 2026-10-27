@@ -12,7 +12,7 @@ from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models import Item, User
+from app.models import HostelComplaint, Item, User
 
 log = logging.getLogger(__name__)
 
@@ -122,6 +122,17 @@ def media_response(filename: str, db: Session) -> Response:
             content=bytes(user.photo_data),
             media_type=mime,
             headers={"Cache-Control": "public, max-age=86400"},
+        )
+
+    complaint = (
+        db.query(HostelComplaint).filter(HostelComplaint.attachment_path == safe).first()
+    )
+    if complaint and complaint.attachment_data:
+        mime = mimetypes.guess_type(safe)[0] or "image/jpeg"
+        return Response(
+            content=bytes(complaint.attachment_data),
+            media_type=mime,
+            headers={"Cache-Control": "private, max-age=86400"},
         )
 
     path = local_upload_path(safe)
