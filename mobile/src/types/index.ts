@@ -25,6 +25,17 @@ export type Item = {
   created_at: string;
 };
 
+/** The signed-in user's own history (GET /api/auth/me/profile). */
+export type Profile = {
+  returned_count: number;
+  lost_count: number;
+  recovered_lost_count: number;
+  member_since: string;
+  returned_items: Item[];
+  found_items: Item[];
+  lost_items: Item[];
+};
+
 export type MatchResult = {
   id: number;
   combined_score: number;

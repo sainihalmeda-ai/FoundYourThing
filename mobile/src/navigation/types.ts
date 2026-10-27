@@ -2,6 +2,7 @@ export type MainTabParamList = {
   HomeTab: undefined;
   FeedTab: undefined;
   ClaimsTab: undefined;
+  ProfileTab: undefined;
 };
 
 export type RootStackParamList = {

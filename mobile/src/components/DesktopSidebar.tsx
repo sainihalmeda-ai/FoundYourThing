@@ -7,7 +7,7 @@ import { navigate } from "../navigation/navigationRef";
 import { UserAvatarPlaceholder } from "./UserAvatarPlaceholder";
 import { COLORS, FONTS } from "../constants/config";
 
-export type SidebarSection = "home" | "feed" | "claims" | "safety" | "about";
+export type SidebarSection = "home" | "feed" | "claims" | "profile" | "safety" | "about";
 
 const NAV_ITEMS: {
   key: SidebarSection;
@@ -35,6 +35,13 @@ const NAV_ITEMS: {
     label: "Requests",
     icon: "mail-outline",
     go: () => navigate("MainTabs", { screen: "ClaimsTab" }),
+    group: "lost-found",
+  },
+  {
+    key: "profile",
+    label: "Profile",
+    icon: "person-circle-outline",
+    go: () => navigate("MainTabs", { screen: "ProfileTab" }),
     group: "lost-found",
   },
   {

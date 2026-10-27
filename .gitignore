@@ -24,3 +24,9 @@ Thumbs.db
 # Secrets
 *.pem
 credentials.json
+
+# Local scratch: sqlite WAL side-files, temp captures, build links
+*.db-shm
+*.db-wal
+.tmp/
+mobile/latest-apk-url.txt

@@ -16,6 +16,7 @@ import { EnquiryConcernDetailScreen } from "../screens/EnquiryConcernDetailScree
 import { EnquiryInboxScreen } from "../screens/EnquiryInboxScreen";
 import { FeedScreen } from "../screens/FeedScreen";
 import { HomeScreen } from "../screens/HomeScreen";
+import { ProfileScreen } from "../screens/ProfileScreen";
 import { ItemDetailScreen } from "../screens/ItemDetailScreen";
 import { ReportConcernScreen } from "../screens/ReportConcernScreen";
 import { ReportScreen } from "../screens/ReportScreen";
@@ -96,7 +97,9 @@ function MainTabs() {
         tabBarLabelStyle: styles.tabLabel,
         sceneStyle: { backgroundColor: COLORS.background },
         // Cross-fade + shift instead of an instant cut when switching tabs.
-        animation: "shift",
+        // On wide screens the sidebar lives inside each screen, so shifting
+        // would drag it along — SidebarShell animates just the content there.
+        animation: wide ? "none" : "shift",
       }}
     >
       <Tab.Screen
@@ -135,12 +138,26 @@ function MainTabs() {
           ),
         }}
       />
+      <Tab.Screen
+        name="ProfileTab"
+        component={ProfileScreen}
+        options={{
+          title: "Profile",
+          headerShown: false,
+          tabBarLabel: "Profile",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon focused={focused} name="person" nameOutline="person-outline" />
+          ),
+        }}
+      />
     </Tab.Navigator>
   );
 }
 
 /** Authenticated stack: tabs + detail/report screens. */
 export function AppStack() {
+  const { width } = useWindowDimensions();
+  const wide = width >= WIDE_BREAKPOINT;
   return (
     <Stack.Navigator
       initialRouteName="Chooser"
@@ -178,7 +195,17 @@ export function AppStack() {
       <Stack.Screen name="Feed" component={FeedScreen} options={{ title: "Campus feed" }} />
       <Stack.Screen name="Claims" component={ClaimsScreen} options={{ title: "Incoming requests" }} />
       <Stack.Screen name="About" component={AboutScreen} options={{ title: "About" }} />
-      <Stack.Screen name="Safety" component={SafetyScreen} options={{ title: "Report a concern" }} />
+      <Stack.Screen
+        name="Safety"
+        component={SafetyScreen}
+        // Safety is a sidebar page on desktop: SidebarShell animates it and the
+        // sidebar replaces the stack header, so drop both there.
+        options={{
+          title: "Report a concern",
+          headerShown: !wide,
+          animation: wide ? "none" : "slide_from_right",
+        }}
+      />
       <Stack.Screen
         name="ReportConcern"
         component={ReportConcernScreen}

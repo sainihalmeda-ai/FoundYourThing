@@ -43,8 +43,8 @@ export function ClaimsScreen() {
   }, [token]);
 
   useFocusEffect(
+    // Refetch quietly on refocus — only the first visit shows a loader.
     useCallback(() => {
-      setLoading(true);
       setSuccess(null);
       load();
     }, [load]),

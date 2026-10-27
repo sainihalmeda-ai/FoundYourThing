@@ -16,12 +16,11 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchItems } from "../api/auth";
 import { ConnectionBanner } from "../components/ConnectionBanner";
-import { ConnectionGate } from "../components/ConnectionGate";
 import { DaylightBackdrop } from "../components/SpatialBackdrop";
 import { ErrorState } from "../components/ErrorState";
 import { HomeButton } from "../components/HomeButton";
+import { SidebarShell } from "../components/SidebarShell";
 import { ItemCard } from "../components/ItemCard";
-import { LoadingOverlay } from "../components/LoadingOverlay";
 import { PageEnter } from "../components/PageEnter";
 import {
   EmptyState,
@@ -29,7 +28,7 @@ import {
 } from "../components/states";
 import { useAuth } from "../context/AuthContext";
 import { RootStackParamList } from "../navigation/types";
-import { COLORS, FONTS, RADIUS, SHADOW } from "../constants/config";
+import { COLORS, FONTS, RADIUS, SHADOW, WIDE_BREAKPOINT } from "../constants/config";
 import type { Item } from "../types";
 
 type FeedTab = "lost" | "found" | "mine";
@@ -39,7 +38,7 @@ export function FeedScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const wide = width >= 900;
+  const wide = width >= WIDE_BREAKPOINT;
   const { token, user } = useAuth();
   const [campusItems, setCampusItems] = useState<Item[]>([]);
   const [myItems, setMyItems] = useState<Item[]>([]);
@@ -69,8 +68,8 @@ export function FeedScreen() {
   }, [token]);
 
   useFocusEffect(
+    // Refetch quietly on refocus — only the first visit shows a loader.
     useCallback(() => {
-      setLoading(true);
       load();
     }, [load]),
   );
@@ -110,14 +109,6 @@ export function FeedScreen() {
     });
   }, [sectionItems, query]);
 
-  if (loading) {
-    return (
-      <LoadingOverlay
-        label="Loading campus feed"
-        hint="Fetching the latest lost & found reports…"
-      />
-    );
-  }
   if (error) return <ErrorState error={error} onRetry={load} />;
 
   const tabs: { key: FeedTab; label: string }[] = [
@@ -126,12 +117,10 @@ export function FeedScreen() {
     { key: "mine", label: "My items" },
   ];
 
-  return (
-    <ConnectionGate>
-      <View style={styles.root}>
-        <DaylightBackdrop />
-        <ConnectionBanner />
-        <PageEnter
+  const content = (
+    <>
+      <ConnectionBanner />
+      <PageEnter
           style={[
             styles.header,
             { paddingTop: Math.max(insets.top, 12) + 8 },
@@ -280,13 +269,23 @@ export function FeedScreen() {
             )
           }
         />
-      </View>
-    </ConnectionGate>
+    </>
+  );
+
+  return (
+    <SidebarShell
+      active="feed"
+      loading={loading}
+      loadingLabel="Loading campus feed"
+      loadingHint="Fetching the latest lost & found reports…"
+      backdrop={<DaylightBackdrop />}
+    >
+      {content}
+    </SidebarShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.background },
   wideCol: {
     width: "100%",
     maxWidth: 768,

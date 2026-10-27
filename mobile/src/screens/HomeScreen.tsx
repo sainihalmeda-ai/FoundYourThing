@@ -6,9 +6,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchIncomingClaims, fetchItems, fetchStats } from "../api/auth";
 import { ConnectionBanner } from "../components/ConnectionBanner";
 import { ConnectionGate } from "../components/ConnectionGate";
-import { DesktopSidebar } from "../components/DesktopSidebar";
 import { DaylightBackdrop } from "../components/SpatialBackdrop";
 import { SectionStepper } from "../components/SectionStepper";
+import { SidebarShell } from "../components/SidebarShell";
 import { HomeLayoutSwitcher } from "../components/home/HomeLayoutSwitcher";
 import { HomePortal } from "../components/home/HomePortal";
 import { HomeGrid } from "../components/home/HomeGrid";
@@ -30,6 +30,7 @@ export function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [pendingCount, setPendingCount] = useState(0);
   const [stats, setStats] = useState<HomeStats>(null);
+  const [statsError, setStatsError] = useState(false);
   const [layout, setLayout] = useState<HomeLayout>("portal");
   const [allItems, setAllItems] = useState<Item[]>([]);
   const [itemsLoading, setItemsLoading] = useState(true);
@@ -48,6 +49,20 @@ export function HomeScreen() {
     saveHomeLayout(next);
   }, []);
 
+  const loadStats = useCallback(async () => {
+    if (!token) return;
+    setStatsError(false);
+    try {
+      const data = await fetchStats(token);
+      setStats(data);
+    } catch {
+      // A failed fetch must not look identical to "still loading" forever —
+      // that left the desktop dashboard stuck on "Loading campus activity…"
+      // with no way out. statsError lets HomeDesktop show a retry instead.
+      setStatsError(true);
+    }
+  }, [token]);
+
   useFocusEffect(
     useCallback(() => {
       let alive = true;
@@ -60,19 +75,11 @@ export function HomeScreen() {
           if (alive) setPendingCount(0);
         }
       })();
-      (async () => {
-        if (!token) return;
-        try {
-          const data = await fetchStats(token);
-          if (alive) setStats(data);
-        } catch {
-          // Leave stats null — the strip just shows a loading dash, not a fake number.
-        }
-      })();
+      loadStats();
       return () => {
         alive = false;
       };
-    }, [token]),
+    }, [token, loadStats]),
   );
 
   // Full item list backs both the phone Feed layout (sliced to a preview)
@@ -111,7 +118,7 @@ export function HomeScreen() {
     firstName,
     vtuId: user?.vtu_id,
     stats,
-    statsLoading: !stats,
+    statsLoading: !stats && !statsError,
     pendingCount,
     // The switcher dock above already eats the safe-area inset — variants
     // just need a small gap under it, not the inset again.
@@ -127,27 +134,26 @@ export function HomeScreen() {
 
   if (wide) {
     return (
-      <ConnectionGate>
-        <View style={styles.desktopRoot}>
-          <DesktopSidebar active="home" pendingCount={pendingCount} />
-          <HomeDesktop
-            firstName={firstName}
-            vtuId={user?.vtu_id}
-            photoUrl={user?.photo_url}
-            token={token}
-            onPhotoUploaded={refreshProfile}
-            stats={stats}
-            statsLoading={!stats}
-            allItems={allItems}
-            allItemsLoading={itemsLoading}
-            onReportLost={shared.onReportLost}
-            onReportFound={shared.onReportFound}
-            onBrowse={shared.onBrowse}
-            onSafety={() => navigation.navigate("Safety")}
-            onOpenItem={(itemId) => navigation.navigate("ItemDetail", { itemId })}
-          />
-        </View>
-      </ConnectionGate>
+      <SidebarShell active="home" pendingCount={pendingCount}>
+        <HomeDesktop
+          firstName={firstName}
+          vtuId={user?.vtu_id}
+          photoUrl={user?.photo_url}
+          token={token}
+          onPhotoUploaded={refreshProfile}
+          stats={stats}
+          statsLoading={!stats && !statsError}
+          statsError={statsError}
+          onRetryStats={loadStats}
+          allItems={allItems}
+          allItemsLoading={itemsLoading}
+          onReportLost={shared.onReportLost}
+          onReportFound={shared.onReportFound}
+          onBrowse={shared.onBrowse}
+          onSafety={() => navigation.navigate("Safety")}
+          onOpenItem={(itemId) => navigation.navigate("ItemDetail", { itemId })}
+        />
+      </SidebarShell>
     );
   }
 
@@ -190,7 +196,6 @@ export function HomeScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
-  desktopRoot: { flex: 1, flexDirection: "row", backgroundColor: COLORS.background },
   switcherDock: {
     flexDirection: "row",
     alignItems: "center",

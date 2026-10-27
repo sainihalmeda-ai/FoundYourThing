@@ -6,11 +6,9 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchConcernTeamAccess, fetchMyConcerns } from "../api/auth";
 import { ConnectionBanner } from "../components/ConnectionBanner";
-import { ConnectionGate } from "../components/ConnectionGate";
-import { DesktopSidebar } from "../components/DesktopSidebar";
 import { HomeButton } from "../components/HomeButton";
-import { LoadingOverlay } from "../components/LoadingOverlay";
 import { SectionStepper } from "../components/SectionStepper";
+import { SidebarShell } from "../components/SidebarShell";
 import { Badge } from "../components/Ui";
 import { EmptyState, ErrorState } from "../components/states";
 import { useAuth } from "../context/AuthContext";
@@ -60,21 +58,18 @@ export function SafetyScreen() {
   }, [token]);
 
   useFocusEffect(
+    // Refetch quietly on refocus — only the first visit shows a loader.
     useCallback(() => {
-      setLoading(true);
       load();
     }, [load]),
   );
 
-  if (loading) {
-    return <LoadingOverlay label="Loading" hint="Checking your reports…" />;
-  }
   if (error) return <ErrorState error={error} onRetry={load} />;
 
   const content = (
     <>
       <ConnectionBanner />
-      <View style={[styles.header, { paddingTop: wide ? 8 : Math.max(insets.top, 12) + 8 }]}>
+      <View style={[styles.header, { paddingTop: wide ? 28 : Math.max(insets.top, 12) + 8 }]}>
         <View style={styles.headerTop}>
           <View style={styles.headerText}>
             <Text style={styles.title} numberOfLines={2}>
@@ -173,22 +168,13 @@ export function SafetyScreen() {
   );
 
   return (
-    <ConnectionGate>
-      {wide ? (
-        <View style={styles.desktopRoot}>
-          <DesktopSidebar active="safety" />
-          <View style={{ flex: 1 }}>{content}</View>
-        </View>
-      ) : (
-        <View style={styles.root}>{content}</View>
-      )}
-    </ConnectionGate>
+    <SidebarShell active="safety" loading={loading} loadingHint="Checking your reports…">
+      {content}
+    </SidebarShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.background },
-  desktopRoot: { flex: 1, flexDirection: "row", backgroundColor: COLORS.background },
   header: { paddingHorizontal: 20, paddingBottom: 10 },
   headerTop: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 12 },
   headerText: { flex: 1, minWidth: 0, paddingRight: 4 },

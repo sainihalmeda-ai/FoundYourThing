@@ -25,6 +25,8 @@ export function HomeDesktop({
   onPhotoUploaded,
   stats,
   statsLoading,
+  statsError = false,
+  onRetryStats,
   allItems,
   allItemsLoading,
   onReportLost,
@@ -40,6 +42,8 @@ export function HomeDesktop({
   onPhotoUploaded: () => void;
   stats: HomeStats;
   statsLoading: boolean;
+  statsError?: boolean;
+  onRetryStats?: () => void;
   allItems: Item[];
   allItemsLoading: boolean;
   onReportLost: () => void;
@@ -104,11 +108,18 @@ export function HomeDesktop({
               {firstName}
               {vtuId ? <Text style={styles.welcomeVtu}> · {vtuId}</Text> : null}
             </Text>
-            <Text style={styles.welcomeBlurb}>
-              {statsLoading
-                ? "Loading campus activity…"
-                : `${stats?.items_reported ?? 0} items reported and ${stats?.registered_users ?? 0} verified accounts across campus this term.`}
-            </Text>
+            {statsError ? (
+              <Pressable onPress={onRetryStats} style={styles.welcomeError}>
+                <Ionicons name="refresh" size={12} color="#fff" />
+                <Text style={styles.welcomeErrorText}>Couldn't load campus activity — tap to retry</Text>
+              </Pressable>
+            ) : (
+              <Text style={styles.welcomeBlurb}>
+                {statsLoading
+                  ? "Loading campus activity…"
+                  : `${stats?.items_reported ?? 0} items reported and ${stats?.registered_users ?? 0} verified accounts across campus this term.`}
+              </Text>
+            )}
           </View>
         </View>
 
@@ -120,13 +131,20 @@ export function HomeDesktop({
             ]}
           >
             <View style={styles.ringHole}>
-              <Text style={styles.ringValue}>{statsLoading ? "—" : `${recoveredPct}%`}</Text>
+              <Text style={styles.ringValue}>{statsLoading || statsError ? "—" : `${recoveredPct}%`}</Text>
               <Text style={styles.ringCaption}>recovered</Text>
             </View>
           </View>
           <View>
             <Text style={styles.statLabel}>Reports filed</Text>
-            <Text style={styles.statBig}>{statsLoading ? "—" : stats?.items_reported ?? 0}</Text>
+            {statsError ? (
+              <Pressable onPress={onRetryStats} style={styles.statRetry}>
+                <Ionicons name="refresh" size={12} color={COLORS.accent} />
+                <Text style={styles.statRetryText}>Retry</Text>
+              </Pressable>
+            ) : (
+              <Text style={styles.statBig}>{statsLoading ? "—" : stats?.items_reported ?? 0}</Text>
+            )}
           </View>
         </View>
 
@@ -322,6 +340,19 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,.68)",
     lineHeight: 18,
   },
+  welcomeError: {
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    alignSelf: "flex-start",
+  },
+  welcomeErrorText: {
+    fontFamily: FONTS.sansSemi,
+    fontSize: 12.5,
+    color: "#fff",
+    textDecorationLine: "underline",
+  },
   statCard: {
     flex: 1,
     backgroundColor: COLORS.card,
@@ -362,6 +393,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   statBig: { marginTop: 6, fontFamily: FONTS.display, fontSize: 22, color: COLORS.text },
+  statRetry: { marginTop: 6, flexDirection: "row", alignItems: "center", gap: 4 },
+  statRetryText: { fontFamily: FONTS.sansBold, fontSize: 13, color: COLORS.accent },
   legendText: { fontFamily: FONTS.sansMedium, fontSize: 11, color: COLORS.text },
   sectionLabel: {
     fontFamily: FONTS.sansBold,

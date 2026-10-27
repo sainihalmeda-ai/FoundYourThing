@@ -1,7 +1,16 @@
 import { apiRequest } from "../api/client";
 import { UPLOAD_TIMEOUT_MS } from "../constants/config";
 import { clearToken, getToken, saveToken } from "../lib/tokenStorage";
-import type { Claim, Concern, ConcernStatus, ConcernTeamView, Item, MatchResult, User } from "../types";
+import type {
+  Claim,
+  Concern,
+  ConcernStatus,
+  ConcernTeamView,
+  Item,
+  MatchResult,
+  Profile,
+  User,
+} from "../types";
 
 export { clearToken, getToken, saveToken };
 
@@ -62,6 +71,10 @@ export async function fetchStats(token: string) {
     active_connections: number;
     registered_users: number;
   }>("/api/items/stats", { token });
+}
+
+export async function fetchProfile(token: string) {
+  return apiRequest<Profile>("/api/auth/me/profile", { token });
 }
 
 export async function fetchItems(
