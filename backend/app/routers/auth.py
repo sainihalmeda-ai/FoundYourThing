@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import create_access_token, get_current_user, hash_password, verify_password
 from app.database import get_db
-from app.models import User
+from app.models import Item, ItemStatus, ItemType, User
 from app.schemas import TokenResponse, UserLogin, UserPublic, UserRegister
 from app.services.campus_email import validate_campus_email
 from app.services.campus_id import (
@@ -16,6 +16,7 @@ from app.services.campus_id import (
     normalize_campus_id,
     role_for_campus_id,
 )
+from app.services.privacy import serialize_item
 from app.services.storage import public_image_url, save_item_photo
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -46,6 +47,13 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="This ID is already registered.")
     if db.query(User).filter(User.email == str(payload.email).strip().lower()).first():
         raise HTTPException(status_code=400, detail="This email is already registered.")
+    # payload.phone is already normalised to 10 digits by the schema validator,
+    # so "+91 81234 09765" and "8123409765" collide here as they should.
+    if db.query(User).filter(User.phone == payload.phone).first():
+        raise HTTPException(
+            status_code=400,
+            detail="This mobile number is already linked to another account.",
+        )
 
     user = User(
         vtu_id=payload.vtu_id,
@@ -95,6 +103,43 @@ def refresh(current_user: User = Depends(get_current_user)):
 @router.get("/me", response_model=UserPublic)
 def me(current_user: User = Depends(get_current_user)):
     return _user_public(current_user)
+
+
+@router.get("/me/profile")
+def my_profile(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """The signed-in user's own history — never exposed to anyone else.
+
+    A "return" is a found report that reached RECOVERED, which only happens
+    via confirm-recovered on an accepted claim — so it can't be inflated by
+    just posting items. Closed lost reports are hidden from the public feed
+    for privacy, but the owner still sees them here as "got it back".
+    """
+    items = (
+        db.query(Item)
+        .filter(Item.user_id == current_user.id)
+        .order_by(Item.created_at.desc())
+        .all()
+    )
+    returned = [i for i in items if i.item_type == ItemType.FOUND and i.status == ItemStatus.RECOVERED]
+    found_active = [i for i in items if i.item_type == ItemType.FOUND and i.status != ItemStatus.RECOVERED]
+    lost = [i for i in items if i.item_type == ItemType.LOST]
+    recovered_lost = [i for i in lost if i.status in (ItemStatus.CLOSED, ItemStatus.RECOVERED)]
+
+    def ser(item_list):
+        return [serialize_item(i, current_user) for i in item_list]
+
+    return {
+        "returned_count": len(returned),
+        "lost_count": len(lost),
+        "recovered_lost_count": len(recovered_lost),
+        "member_since": current_user.created_at,
+        "returned_items": ser(returned),
+        "found_items": ser(found_active),
+        "lost_items": ser(lost),
+    }
 
 
 @router.post("/me/photo", response_model=UserPublic)
