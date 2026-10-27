@@ -16,6 +16,7 @@ import { PressScale } from "../PressScale";
 import { EmptyState } from "../states";
 import { COLORS, FONTS, RADIUS, SHADOW } from "../../constants/config";
 import { countBy, matchesQuery, returnedLast } from "../../lib/feedFilter";
+import { useDesktopLayout } from "../../lib/useDesktopLayout";
 import type { Item } from "../../types";
 
 type FeedTab = "lost" | "found" | "mine";
@@ -57,6 +58,9 @@ export function FeedDesktop({
   const [hideReturned, setHideReturned] = useState(false);
   const [gridWidth, setGridWidth] = useState(0);
   const [searchFocused, setSearchFocused] = useState(false);
+  // In a narrow window the filter rail moves above the grid instead of beside it.
+  const { contentWidth } = useDesktopLayout();
+  const railOnTop = contentWidth < 860;
 
   const stats = useMemo(() => {
     const open = (type: "lost" | "found") =>
@@ -179,10 +183,16 @@ export function FeedDesktop({
         />
       </View>
 
-      <View style={styles.body}>
+      <View style={[styles.body, railOnTop && styles.bodyStacked]}>
         {/* Filter rail */}
-        <View style={styles.rail}>
-          <View style={[styles.searchWrap, searchFocused && styles.searchWrapFocused]}>
+        <View style={[styles.rail, railOnTop && styles.railTop]}>
+          <View
+            style={[
+              styles.searchWrap,
+              railOnTop && styles.searchWrapTop,
+              searchFocused && styles.searchWrapFocused,
+            ]}
+          >
             <Ionicons name="search" size={15} color={COLORS.textMuted} />
             <TextInput
               style={styles.search}
@@ -201,7 +211,7 @@ export function FeedDesktop({
             ) : null}
           </View>
 
-          <View style={styles.railCard}>
+          <View style={[styles.railCard, railOnTop && styles.railCardTop]}>
             <Text style={styles.railLabel}>Category</Text>
             <FilterRow label="All categories" count={tabItems.length} active={!category} onPress={() => setCategory(null)} />
             {categories.map(([name, count]) => (
@@ -216,7 +226,7 @@ export function FeedDesktop({
           </View>
 
           {locations.length > 0 ? (
-            <View style={styles.railCard}>
+            <View style={[styles.railCard, railOnTop && styles.railCardTop]}>
               <Text style={styles.railLabel}>Location</Text>
               <View style={styles.locChips}>
                 {locations.map(([name, count]) => {
@@ -331,7 +341,7 @@ function StatTile({
       </View>
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={styles.statValue}>{value}</Text>
-        <Text style={styles.statLabel} numberOfLines={1}>
+        <Text style={styles.statLabel} numberOfLines={2}>
           {label}
         </Text>
       </View>
@@ -409,9 +419,10 @@ const styles = StyleSheet.create({
   actionText: { fontFamily: FONTS.sansSemi, fontSize: 13, color: COLORS.primary },
   actionInkText: { fontFamily: FONTS.sansSemi, fontSize: 13, color: "#fff" },
 
-  statRow: { flexDirection: "row", gap: 14, marginBottom: 20 },
+  statRow: { flexDirection: "row", flexWrap: "wrap", gap: 14, marginBottom: 20 },
   stat: {
     flex: 1,
+    minWidth: 140,
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
@@ -431,7 +442,12 @@ const styles = StyleSheet.create({
 
   body: { flexDirection: "row", alignItems: "flex-start", gap: 20 },
   rail: { width: 250, gap: 14 },
+  bodyStacked: { flexDirection: "column", alignItems: "stretch" },
+  railTop: { width: "100%", flexDirection: "row", flexWrap: "wrap", alignItems: "flex-start" },
+  railCardTop: { flex: 1, minWidth: 240 },
   searchWrap: {
+    minWidth: 240,
+    flexGrow: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
@@ -442,6 +458,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   searchWrapFocused: { borderColor: COLORS.primary },
+  searchWrapTop: { width: "100%" },
   search: {
     flex: 1,
     paddingVertical: 11,

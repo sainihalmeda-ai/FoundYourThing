@@ -7,7 +7,6 @@ import {
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -25,7 +24,9 @@ import { ConnectionBanner } from "../components/ConnectionBanner";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingOverlay } from "../components/LoadingOverlay";
 import { PhotoView } from "../components/PhotoView";
+import { DesktopPageHeader } from "../components/DesktopPageHeader";
 import { SidebarShell } from "../components/SidebarShell";
+import { useDesktopLayout } from "../lib/useDesktopLayout";
 import {
   ModeToggle,
   NextSteps,
@@ -56,7 +57,6 @@ import {
   LIVEGO_ENABLED,
   RADIUS,
   SHADOW,
-  WIDE_BREAKPOINT,
 } from "../constants/config";
 import { ApiError } from "../types";
 
@@ -98,8 +98,7 @@ export function ReportScreen({ route, navigation }: Props) {
   const [photoKey, setPhotoKey] = useState(0);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
-  const { width } = useWindowDimensions();
-  const wide = width >= WIDE_BREAKPOINT;
+  const { wide, contentWidth } = useDesktopLayout();
 
   // The desktop header can switch Lost <-> Found in place; keep the
   // urgent default in step with whichever mode is showing.
@@ -566,90 +565,109 @@ export function ReportScreen({ route, navigation }: Props) {
       { label: "Location", done: Boolean(location), hint: "pick a place" },
     ];
     const canSwitchMode = !linkingFound && !linkingLost;
+    // Three columns on a full desktop, two in a half-width window, one when narrow.
+    const columns = contentWidth >= 1000 ? 3 : contentWidth >= 620 ? 2 : 1;
+
+    const photoCard = (
+      <StepCard step={1} title="Photo" icon="camera-outline" done={checks[0].done}>
+        {liveNote}
+        {photoPicker}
+        <View style={styles.tipRow}>
+          <Ionicons name="bulb-outline" size={14} color={COLORS.gold} />
+          <Text style={styles.tipText}>
+            Whole item, plain background, good light — matching compares photos.
+          </Text>
+        </View>
+      </StepCard>
+    );
+    const whereCard = (
+      <StepCard
+        step={3}
+        title={mode === "lost" ? "Where did you lose it?" : "Where did you find it?"}
+        icon="location-outline"
+        done={checks[4].done}
+      >
+        {locationChips}
+      </StepCard>
+    );
+    const aboutCard = (
+      <StepCard
+        step={2}
+        title="About the item"
+        icon="pricetag-outline"
+        done={checks[1].done && checks[2].done && checks[3].done}
+      >
+        {categoryPicker}
+        {detailFields}
+      </StepCard>
+    );
+    const nextSteps = <NextSteps mode={mode} />;
+    const postColumn = (
+      <>
+        {linkedRef}
+        <ReportPreview
+          mode={mode}
+          photoUri={photo?.uri ?? null}
+          title={title}
+          categoryLabel={categories.find((c) => c.id === category)?.label ?? ""}
+          location={location}
+          description={description}
+          reporterVtu={user?.vtu_id}
+          isUrgent={isUrgent}
+          onUrgentChange={mode === "lost" ? setIsUrgent : undefined}
+          checks={checks}
+        />
+        {submitBlock}
+      </>
+    );
 
     return (
       <SidebarShell active="home" loading={loadingMeta} loadingLabel="Preparing report">
         <ConnectionBanner />
         <ScrollView contentContainerStyle={styles.deskScroll} showsVerticalScrollIndicator={false}>
-          <View style={styles.deskHeader}>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <View style={styles.eyebrowRow}>
-                <Pressable
-                  onPress={() =>
-                    navigation.canGoBack()
-                      ? navigation.goBack()
-                      : navigation.navigate("MainTabs")
-                  }
-                  style={({ pressed }) => [styles.backPill, pressed && { opacity: 0.7 }]}
-                  accessibilityRole="button"
-                >
-                  <Ionicons name="chevron-back" size={14} color={COLORS.primary} />
-                  <Text style={styles.backPillText}>Back</Text>
-                </Pressable>
-                <Text style={styles.deskEyebrow}>
-                  Lost &amp; Found · {mode === "lost" ? "Lost item" : "Found item"}
-                </Text>
+          <DesktopPageHeader
+            eyebrow={`Lost & Found · ${mode === "lost" ? "Lost item" : "Found item"}`}
+            title={headline}
+            subtitle={intro}
+            right={
+              canSwitchMode ? (
+                <ModeToggle mode={mode} onChange={(m) => navigation.setParams({ mode: m })} />
+              ) : null
+            }
+          />
+          {columns === 3 ? (
+            <View style={styles.deskGrid}>
+              <View style={styles.deskColA}>
+                {photoCard}
+                {whereCard}
               </View>
-              <Text style={styles.deskTitle}>{headline}</Text>
-              <Text style={styles.deskSub}>{intro}</Text>
+              <View style={styles.deskColB}>
+                {aboutCard}
+                {nextSteps}
+              </View>
+              <View style={styles.deskColC}>{postColumn}</View>
             </View>
-            {canSwitchMode ? (
-              <ModeToggle mode={mode} onChange={(m) => navigation.setParams({ mode: m })} />
-            ) : null}
-          </View>
-
-          <View style={styles.deskGrid}>
-            <View style={styles.deskColA}>
-              <StepCard step={1} title="Photo" icon="camera-outline" done={checks[0].done}>
-                {liveNote}
-                {photoPicker}
-                <View style={styles.tipRow}>
-                  <Ionicons name="bulb-outline" size={14} color={COLORS.gold} />
-                  <Text style={styles.tipText}>
-                    Whole item, plain background, good light — matching compares photos.
-                  </Text>
-                </View>
-              </StepCard>
-              <StepCard
-                step={3}
-                title={mode === "lost" ? "Where did you lose it?" : "Where did you find it?"}
-                icon="location-outline"
-                done={checks[4].done}
-              >
-                {locationChips}
-              </StepCard>
+          ) : columns === 2 ? (
+            <View style={styles.deskGrid}>
+              <View style={styles.deskColA}>
+                {photoCard}
+                {whereCard}
+                {nextSteps}
+              </View>
+              <View style={styles.deskColB}>
+                {aboutCard}
+                {postColumn}
+              </View>
             </View>
-
-            <View style={styles.deskColB}>
-              <StepCard
-                step={2}
-                title="About the item"
-                icon="pricetag-outline"
-                done={checks[1].done && checks[2].done && checks[3].done}
-              >
-                {categoryPicker}
-                {detailFields}
-              </StepCard>
-              <NextSteps mode={mode} />
+          ) : (
+            <View style={styles.deskStack}>
+              {photoCard}
+              {aboutCard}
+              {whereCard}
+              {postColumn}
+              {nextSteps}
             </View>
-
-            <View style={styles.deskColC}>
-              {linkedRef}
-              <ReportPreview
-                mode={mode}
-                photoUri={photo?.uri ?? null}
-                title={title}
-                categoryLabel={categories.find((c) => c.id === category)?.label ?? ""}
-                location={location}
-                description={description}
-                reporterVtu={user?.vtu_id}
-                isUrgent={isUrgent}
-                onUrgentChange={mode === "lost" ? setIsUrgent : undefined}
-                checks={checks}
-              />
-              {submitBlock}
-            </View>
-          </View>
+          )}
         </ScrollView>
       </SidebarShell>
     );
@@ -684,53 +702,11 @@ const styles = StyleSheet.create({
     maxWidth: 1240,
     alignSelf: "center",
   },
-  deskHeader: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    gap: 16,
-    marginBottom: 18,
-  },
-  eyebrowRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  backPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    paddingVertical: 4,
-    paddingLeft: 6,
-    paddingRight: 10,
-    borderRadius: RADIUS.pill,
-    backgroundColor: COLORS.card,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  backPillText: { fontFamily: FONTS.sansSemi, fontSize: 12.5, color: COLORS.primary },
-  deskEyebrow: {
-    fontFamily: FONTS.sansBold,
-    fontSize: 11,
-    color: COLORS.textMuted,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  deskTitle: {
-    marginTop: 4,
-    fontFamily: FONTS.display,
-    fontSize: 28,
-    color: COLORS.text,
-    letterSpacing: -0.5,
-  },
-  deskSub: {
-    marginTop: 4,
-    maxWidth: 640,
-    fontFamily: FONTS.sans,
-    fontSize: 13,
-    lineHeight: 19,
-    color: COLORS.textMuted,
-  },
   deskGrid: { flexDirection: "row", alignItems: "flex-start", gap: 18 },
   deskColA: { flex: 1.1, minWidth: 0, gap: 18 },
   deskColB: { flex: 1.3, minWidth: 0, gap: 18 },
   deskColC: { width: 300, gap: 14 },
+  deskStack: { gap: 16 },
   tipRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 },
   tipText: { flex: 1, fontFamily: FONTS.sans, fontSize: 11.5, color: COLORS.textMuted },
   photoDesk: { height: 180 },

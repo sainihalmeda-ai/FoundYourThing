@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { resolveImageUrl } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { navigate } from "../navigation/navigationRef";
+import { useDesktopLayout } from "../lib/useDesktopLayout";
 import { UserAvatarPlaceholder } from "./UserAvatarPlaceholder";
 import { COLORS, FONTS } from "../constants/config";
 
@@ -84,22 +85,28 @@ export function DesktopSidebar({
   pendingCount?: number;
 }) {
   const { user, logout } = useAuth();
+  // Narrow desktop windows get an icon-only rail so pages keep their room.
+  const { compactNav: compact } = useDesktopLayout();
   const firstName =
     user?.full_name?.trim().split(/\s+/)[0] || user?.vtu_id?.replace(/^VTU/i, "") || "Student";
   const initial = firstName.charAt(0).toUpperCase();
 
   return (
-    <View style={styles.root}>
-      <View style={styles.brandRow}>
+    <View style={[styles.root, compact && styles.rootCompact]}>
+      <View style={[styles.brandRow, compact && styles.brandRowCompact]}>
         <View style={styles.brandMark}>
           <Text style={styles.brandMarkText}>FYT</Text>
         </View>
-        <Text style={styles.brandName}>FoundYourThing</Text>
+        {compact ? null : <Text style={styles.brandName}>FoundYourThing</Text>}
       </View>
 
       {NAV_GROUPS.map((group, index) => (
         <React.Fragment key={group.key}>
-          <Text style={[styles.groupLabel, index > 0 && { marginTop: 20 }]}>{group.label}</Text>
+          {compact ? (
+            index > 0 ? <View style={styles.groupDivider} /> : null
+          ) : (
+            <Text style={[styles.groupLabel, index > 0 && { marginTop: 20 }]}>{group.label}</Text>
+          )}
           {NAV_ITEMS.filter((i) => i.group === group.key).map((item) => (
             <SidebarItem
               key={item.key}
@@ -108,6 +115,7 @@ export function DesktopSidebar({
               active={active === item.key}
               onPress={item.go}
               badge={item.key === "claims" && pendingCount > 0 ? pendingCount : undefined}
+              compact={compact}
             />
           ))}
         </React.Fragment>
@@ -120,24 +128,27 @@ export function DesktopSidebar({
         icon="information-circle-outline"
         active={active === "about"}
         onPress={() => navigate("About")}
+        compact={compact}
       />
 
       <View style={styles.divider} />
 
-      <View style={styles.userRow}>
+      <View style={[styles.userRow, compact && styles.userRowCompact]}>
         <UserAvatarPlaceholder
           initial={initial}
           photoUri={user?.photo_url ? resolveImageUrl(user.photo_url) : null}
           size={34}
         />
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={styles.userName} numberOfLines={1}>
-            {firstName}
-          </Text>
-          <Text style={styles.userId} numberOfLines={1}>
-            {user?.vtu_id}
-          </Text>
-        </View>
+        {compact ? null : (
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.userName} numberOfLines={1}>
+              {firstName}
+            </Text>
+            <Text style={styles.userId} numberOfLines={1}>
+              {user?.vtu_id}
+            </Text>
+          </View>
+        )}
         <Pressable
           onPress={logout}
           hitSlop={8}
@@ -157,26 +168,36 @@ function SidebarItem({
   active,
   onPress,
   badge,
+  compact = false,
 }: {
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
   active: boolean;
   onPress: () => void;
   badge?: number;
+  /** Icon only (the label becomes the accessibility label / hover title). */
+  compact?: boolean;
 }) {
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="link"
+      accessibilityLabel={label}
+      // Web shows this as a hover tooltip on the icon rail.
+      {...(compact ? ({ title: label } as object) : null)}
       style={({ pressed }) => [
         styles.item,
+        compact && styles.itemCompact,
         active && styles.itemActive,
         pressed && !active && styles.itemPressed,
       ]}
     >
-      <Ionicons name={icon} size={18} color={active ? "#fff" : COLORS.textMuted} />
-      <Text style={[styles.itemLabel, active && styles.itemLabelActive]}>{label}</Text>
+      <Ionicons name={icon} size={compact ? 20 : 18} color={active ? "#fff" : COLORS.textMuted} />
+      {compact ? null : (
+        <Text style={[styles.itemLabel, active && styles.itemLabelActive]}>{label}</Text>
+      )}
       {badge ? (
-        <View style={styles.badge}>
+        <View style={[styles.badge, compact && styles.badgeCompact]}>
           <Text style={styles.badgeText}>{badge > 9 ? "9+" : badge}</Text>
         </View>
       ) : null}
@@ -194,7 +215,13 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     paddingHorizontal: 16,
   },
+  rootCompact: { width: 76, paddingHorizontal: 12, alignItems: "stretch" },
   brandRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 6, marginBottom: 28 },
+  brandRowCompact: { justifyContent: "center", paddingHorizontal: 0 },
+  groupDivider: { height: 1, backgroundColor: COLORS.divider, marginVertical: 12, marginHorizontal: 8 },
+  itemCompact: { justifyContent: "center", paddingHorizontal: 0, height: 44 },
+  badgeCompact: { position: "absolute", top: 4, right: 6 },
+  userRowCompact: { flexDirection: "column", paddingHorizontal: 0, gap: 12 },
   brandMark: {
     width: 32,
     height: 32,

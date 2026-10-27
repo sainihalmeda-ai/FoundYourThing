@@ -304,9 +304,10 @@ function RowThumb({ uri }: { uri?: string | null }) {
 
 const styles = StyleSheet.create({
   scroll: { padding: 28, paddingBottom: 48, flexGrow: 1 },
-  topRow: { flexDirection: "row", gap: 20, marginBottom: 24 },
+  topRow: { flexDirection: "row", flexWrap: "wrap", gap: 20, marginBottom: 24 },
   welcomeCard: {
     flex: 1.6,
+    minWidth: 340,
     backgroundColor: COLORS.primary,
     borderRadius: RADIUS["2xl"],
     padding: 24,
@@ -355,6 +356,7 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
+    minWidth: 220,
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -404,9 +406,10 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 12,
   },
-  quickGrid: { flexDirection: "row", gap: 16, marginBottom: 24 },
+  quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 16, marginBottom: 24 },
   quickCard: {
     flex: 1,
+    minWidth: 170,
     height: 116,
     borderRadius: RADIUS.xl,
     borderWidth: 1,

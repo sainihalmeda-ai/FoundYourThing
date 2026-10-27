@@ -181,9 +181,10 @@ const styles = StyleSheet.create({
   rowMeta: { marginTop: 3, fontFamily: FONTS.sans, fontSize: 11.5, color: COLORS.textMuted },
   pressed: { opacity: 0.92 },
   rowPreview: { marginTop: 6, fontFamily: FONTS.sans, fontSize: 12, lineHeight: 17, color: COLORS.textMuted },
-  statRow: { flexDirection: "row", gap: 14, marginBottom: 16 },
+  statRow: { flexDirection: "row", flexWrap: "wrap", gap: 14, marginBottom: 16 },
   stat: {
     flex: 1,
+    minWidth: 130,
     backgroundColor: COLORS.card,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -198,5 +199,5 @@ const styles = StyleSheet.create({
   statLabel: { fontFamily: FONTS.sansMedium, fontSize: 12, color: COLORS.textMuted },
   statLabelInk: { color: "rgba(255,255,255,.75)" },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 14 },
-  gridCell: { width: "48.5%", flexGrow: 1, marginBottom: 0 },
+  gridCell: { width: "48.5%", minWidth: 280, flexGrow: 1, marginBottom: 0 },
 });

@@ -4,6 +4,7 @@ import { ConnectionBanner } from "./ConnectionBanner";
 import { DesktopPageHeader } from "./DesktopPageHeader";
 import type { SidebarSection } from "./DesktopSidebar";
 import { SidebarShell } from "./SidebarShell";
+import { useDesktopLayout } from "../lib/useDesktopLayout";
 import { COLORS, RADIUS, SHADOW } from "../constants/config";
 
 /**
@@ -43,6 +44,9 @@ export function DesktopPage({
   /** Rendered outside the scroll view, e.g. modals. */
   overlay?: React.ReactNode;
 }) {
+  const { contentWidth } = useDesktopLayout();
+  // Side column drops below the main one when the main one would get too narrow.
+  const stacked = contentWidth < sideWidth + 460;
   return (
     <SidebarShell active={active} loading={loading}>
       <ConnectionBanner />
@@ -55,9 +59,14 @@ export function DesktopPage({
           back={back}
         />
         {children ?? (
-          <View style={styles.grid}>
-            <View style={styles.main}>{main}</View>
-            {side ? <View style={[styles.side, { width: sideWidth }]}>{side}</View> : null}
+          <View style={[styles.grid, stacked && styles.gridStacked]}>
+            {/* Stacked columns get their natural height (flex: 1 here would collapse them). */}
+            <View style={stacked ? styles.stackedCol : styles.main}>{main}</View>
+            {side ? (
+              <View style={stacked ? styles.stackedCol : [styles.side, { width: sideWidth }]}>
+                {side}
+              </View>
+            ) : null}
           </View>
         )}
       </ScrollView>
@@ -89,6 +98,8 @@ const styles = StyleSheet.create({
   grid: { flexDirection: "row", alignItems: "flex-start", gap: 20 },
   main: { flex: 1, minWidth: 0, gap: 16 },
   side: { gap: 16 },
+  gridStacked: { flexDirection: "column", alignItems: "stretch" },
+  stackedCol: { width: "100%", gap: 16 },
   card: {
     backgroundColor: COLORS.card,
     borderWidth: 1,

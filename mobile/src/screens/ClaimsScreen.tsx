@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import { FlatList, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { FlatList, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -10,6 +10,7 @@ import { DaylightBackdrop } from "../components/SpatialBackdrop";
 import { ErrorState } from "../components/ErrorState";
 import { HomeButton } from "../components/HomeButton";
 import { MatchAnalyzer } from "../components/MatchAnalyzer";
+import { useDesktopLayout } from "../lib/useDesktopLayout";
 import { SidebarShell } from "../components/SidebarShell";
 import { AppButton, Badge } from "../components/Ui";
 import { EmptyState, SuccessState } from "../components/states";
@@ -21,7 +22,6 @@ import {
   FONTS,
   RADIUS,
   SHADOW,
-  WIDE_BREAKPOINT,
 } from "../constants/config";
 import type { Claim } from "../types";
 import { ApiError } from "../types";
@@ -40,8 +40,8 @@ export function ClaimsScreen() {
   const [error, setError] = useState<unknown>(null);
   const [respondingId, setRespondingId] = useState<number | null>(null);
   const [success, setSuccess] = useState<{ title: string; message: string } | null>(null);
-  const { width } = useWindowDimensions();
-  const wide = width >= WIDE_BREAKPOINT;
+  const { wide, contentWidth } = useDesktopLayout();
+  const stackCard = contentWidth < 880;
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -191,7 +191,7 @@ export function ClaimsScreen() {
 
           if (wide) {
             return (
-              <View style={[styles.card, styles.cardWide]}>
+              <View style={[styles.card, styles.cardWide, stackCard && styles.cardWideStacked]}>
                 <View style={styles.analysisCol}>{analysis}</View>
                 <View style={styles.detailCol}>
                   {who}
@@ -313,6 +313,7 @@ const styles = StyleSheet.create({
   },
   listWide: { maxWidth: 1180, paddingHorizontal: 28 },
   cardWide: { flexDirection: "row", gap: 24, padding: 20 },
+  cardWideStacked: { flexDirection: "column" },
   analysisCol: { flex: 1.5, minWidth: 0 },
   detailCol: { flex: 1, minWidth: 0 },
   itemLabel: {

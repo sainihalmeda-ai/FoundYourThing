@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
   deskGrid: { flexDirection: "row", flexWrap: "wrap", gap: 16 },
   // Three per row; the last row's cards stretch to fill it.
-  deskCard: { width: "31%", flexGrow: 1, marginBottom: 0, padding: 20 },
+  deskCard: { width: "31%", minWidth: 260, flexGrow: 1, marginBottom: 0, padding: 20 },
   deskFooter: { marginTop: 20, textAlign: "center" },
   scroll: {
     padding: 20,
