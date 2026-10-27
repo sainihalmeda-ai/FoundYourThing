@@ -189,7 +189,16 @@ export function AppStack() {
         component={MainTabs}
         options={{ headerShown: false }}
       />
-      <Stack.Screen name="Report" component={ReportScreen} options={{ title: "New report" }} />
+      <Stack.Screen
+        name="Report"
+        component={ReportScreen}
+        // A sidebar page on desktop (see Safety below): no stack header or slide there.
+        options={{
+          title: "New report",
+          headerShown: !wide,
+          animation: wide ? "none" : "slide_from_right",
+        }}
+      />
       <Stack.Screen name="ItemDetail" component={ItemDetailScreen} options={{ title: "Item details" }} />
       <Stack.Screen name="Home" component={HomeScreen} options={{ title: "FoundYourThing" }} />
       <Stack.Screen name="Feed" component={FeedScreen} options={{ title: "Campus feed" }} />

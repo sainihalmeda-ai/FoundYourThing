@@ -1,5 +1,14 @@
 import React, { useEffect, useState } from "react";
-import { Linking, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { KeyboardAwareScrollView } from "../components/Keyboard";
@@ -13,10 +22,16 @@ import {
 } from "../api/auth";
 import { resolveImageUrl } from "../api/client";
 import { ConnectionBanner } from "../components/ConnectionBanner";
-import { ConnectionGate } from "../components/ConnectionGate";
 import { ErrorState } from "../components/ErrorState";
 import { LoadingOverlay } from "../components/LoadingOverlay";
 import { PhotoView } from "../components/PhotoView";
+import { SidebarShell } from "../components/SidebarShell";
+import {
+  ModeToggle,
+  NextSteps,
+  ReportPreview,
+  StepCard,
+} from "../components/report/ReportDesktopParts";
 import { AppButton, Chip, Field, PremiumSwitch, ScreenShell } from "../components/Ui";
 import {
   PermissionDeniedState,
@@ -35,7 +50,14 @@ import {
 } from "../lib/livePhoto";
 import { hasErrors, validateReport } from "../lib/validation";
 import { RootStackParamList } from "../navigation/types";
-import { COLORS, FONTS, LIVEGO_ENABLED, RADIUS, SHADOW } from "../constants/config";
+import {
+  COLORS,
+  FONTS,
+  LIVEGO_ENABLED,
+  RADIUS,
+  SHADOW,
+  WIDE_BREAKPOINT,
+} from "../constants/config";
 import { ApiError } from "../types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Report">;
@@ -76,6 +98,14 @@ export function ReportScreen({ route, navigation }: Props) {
   const [photoKey, setPhotoKey] = useState(0);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const { width } = useWindowDimensions();
+  const wide = width >= WIDE_BREAKPOINT;
+
+  // The desktop header can switch Lost <-> Found in place; keep the
+  // urgent default in step with whichever mode is showing.
+  useEffect(() => {
+    setIsUrgent(mode === "lost");
+  }, [mode]);
 
   const loadMeta = async () => {
     if (!token) return;
@@ -257,7 +287,7 @@ export function ReportScreen({ route, navigation }: Props) {
     }
   };
 
-  if (loadingMeta) {
+  if (loadingMeta && !wide) {
     return (
       <LoadingOverlay label="Preparing report" hint="Loading categories and campus locations…" />
     );
@@ -265,7 +295,7 @@ export function ReportScreen({ route, navigation }: Props) {
   if (error) return <ErrorState error={error} onRetry={loadMeta} />;
 
   if (successItemId != null) {
-    return (
+    const success = (
       <SuccessState
         title={
           linkingLost && claimSent
@@ -291,6 +321,7 @@ export function ReportScreen({ route, navigation }: Props) {
         onSecondary={() => navigation.navigate("Feed")}
       />
     );
+    return wide ? <SidebarShell active="home">{success}</SidebarShell> : success;
   }
 
   if (permissionDenied) {
@@ -311,227 +342,410 @@ export function ReportScreen({ route, navigation }: Props) {
     );
   }
 
-  return (
-    <ConnectionGate>
-      <View style={styles.root}>
-        <ConnectionBanner />
-        <KeyboardAwareScrollView bottomOffset={24} keyboardShouldPersistTaps="handled">
-          <ScreenShell
-            title={
-              linkingFound
-                ? "Raise lost claim"
-                : linkingLost
-                  ? "I found this item"
-                  : mode === "lost"
-                    ? "Report lost valuable"
-                    : "Report found valuable"
-            }
-            subtitle={
-              linkingFound
-                ? "You’re claiming a found item from the campus feed. Add your photo and details — the finder will get a request with both pictures."
-                : linkingLost
-                  ? "You’re answering a lost report from the campus feed. Add a photo of the item you picked up — the owner will compare both pictures and decide."
-                  : liveOnly
-                    ? "Low-value items like pens and pencils are rejected. Take one live photo of the item you found."
-                    : "Low-value items like pens and pencils are rejected. Upload one clear photo."
-            }
-          >
-            {linkedPreviewUrl ? (
-              <View style={styles.foundRef}>
-                <Text style={styles.foundRefLabel}>
-                  {linkingLost ? "Lost report you’re answering" : "Found item you’re claiming"}
-                </Text>
-                <PhotoView uri={linkedPreviewUrl} style={styles.foundRefImage} />
-                {linkedPreviewTitle ? (
-                  <Text style={styles.foundRefTitle}>{linkedPreviewTitle}</Text>
-                ) : null}
-              </View>
-            ) : null}
+  // ---- Form pieces, arranged below as one column (phone) or a grid (desktop) ----
 
-            {liveOnly ? (
-              <View style={styles.liveNote}>
-                <Ionicons name="camera" size={16} color={COLORS.accent} />
-                <Text style={styles.liveNoteText}>
-                  {hasCamera
-                    ? "Live photo required. We read the photo’s camera data, so downloaded or edited pictures are rejected — shoot the item in front of you."
-                    : "This browser has no camera. Upload an unedited photo you just took on your phone — we read its camera data and reject downloaded or edited images."}
-                </Text>
-              </View>
-            ) : null}
+  const headline = linkingFound
+    ? "Raise lost claim"
+    : linkingLost
+      ? "I found this item"
+      : mode === "lost"
+        ? "Report lost valuable"
+        : "Report found valuable";
 
-            <View style={styles.photoActions}>
-              {singlePhotoButton ? (
-                <Pressable
-                  style={[styles.photoActionBtn, styles.photoActionActive]}
-                  onPress={choosePhoto}
-                >
-                  <Text style={[styles.photoActionText, styles.photoActionTextActive]}>
-                    {cameraOnly
-                      ? photo
-                        ? "Retake live photo"
-                        : "Take live photo"
-                      : photo
-                        ? "Change photo"
-                        : "Choose photo"}
-                  </Text>
-                </Pressable>
-              ) : (
-                <>
-                  <Pressable
-                    style={[
-                      styles.photoActionBtn,
-                      photoSource !== "camera" && styles.photoActionActive,
-                    ]}
-                    onPress={pickFromGallery}
-                  >
-                    <Text
-                      style={[
-                        styles.photoActionText,
-                        photoSource !== "camera" && styles.photoActionTextActive,
-                      ]}
-                    >
-                      Gallery
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.photoActionBtn,
-                      photoSource === "camera" && styles.photoActionActive,
-                    ]}
-                    onPress={takePhoto}
-                  >
-                    <Text
-                      style={[
-                        styles.photoActionText,
-                        photoSource === "camera" && styles.photoActionTextActive,
-                      ]}
-                    >
-                      Camera
-                    </Text>
-                  </Pressable>
-                </>
-              )}
-            </View>
-            {photo ? (
-              // Keyed on the pick counter so a replacement image always remounts.
-              <PhotoView key={photoKey} uri={photo.uri} style={styles.photoPreview} />
-            ) : (
-              <Pressable
-                onPress={choosePhoto}
-                style={({ pressed }) => [
-                  styles.photoBox,
-                  fieldErrors.photo ? styles.photoError : null,
-                  pressed ? styles.photoBoxPressed : null,
+  const intro = linkingFound
+    ? "You’re claiming a found item from the campus feed. Add your photo and details — the finder will get a request with both pictures."
+    : linkingLost
+      ? "You’re answering a lost report from the campus feed. Add a photo of the item you picked up — the owner will compare both pictures and decide."
+      : liveOnly
+        ? "Low-value items like pens and pencils are rejected. Take one live photo of the item you found."
+        : "Low-value items like pens and pencils are rejected. Upload one clear photo.";
+
+  const submitLabel = submitting
+    ? linkingFound || linkingLost
+      ? "Sending to the other student…"
+      : "Posting your report…"
+    : linkingFound
+      ? "Submit lost claim"
+      : linkingLost
+        ? "Notify the owner"
+        : mode === "lost"
+          ? "Post lost report"
+          : "Post found report";
+
+  const linkedRef = linkedPreviewUrl ? (
+    <View style={styles.foundRef}>
+      <Text style={styles.foundRefLabel}>
+        {linkingLost ? "Lost report you’re answering" : "Found item you’re claiming"}
+      </Text>
+      <PhotoView uri={linkedPreviewUrl} style={styles.foundRefImage} />
+      {linkedPreviewTitle ? <Text style={styles.foundRefTitle}>{linkedPreviewTitle}</Text> : null}
+    </View>
+  ) : null;
+
+  const liveNote = liveOnly ? (
+    <View style={styles.liveNote}>
+      <Ionicons name="camera" size={16} color={COLORS.accent} />
+      <Text style={styles.liveNoteText}>
+        {hasCamera
+          ? "Live photo required. We read the photo’s camera data, so downloaded or edited pictures are rejected — shoot the item in front of you."
+          : "This browser has no camera. Upload an unedited photo you just took on your phone — we read its camera data and reject downloaded or edited images."}
+      </Text>
+    </View>
+  ) : null;
+
+  const photoPicker = (
+    <>
+      <View style={styles.photoActions}>
+        {singlePhotoButton ? (
+          <Pressable style={[styles.photoActionBtn, styles.photoActionActive]} onPress={choosePhoto}>
+            <Text style={[styles.photoActionText, styles.photoActionTextActive]}>
+              {cameraOnly
+                ? photo
+                  ? "Retake live photo"
+                  : "Take live photo"
+                : photo
+                  ? "Change photo"
+                  : "Choose photo"}
+            </Text>
+          </Pressable>
+        ) : (
+          <>
+            <Pressable
+              style={[styles.photoActionBtn, photoSource !== "camera" && styles.photoActionActive]}
+              onPress={pickFromGallery}
+            >
+              <Text
+                style={[
+                  styles.photoActionText,
+                  photoSource !== "camera" && styles.photoActionTextActive,
                 ]}
               >
-                <Ionicons
-                  name={cameraOnly ? "camera-outline" : "image-outline"}
-                  size={26}
-                  color={COLORS.accent}
-                />
-                <Text style={styles.photoHint}>{photoHint}</Text>
-              </Pressable>
-            )}
-            {liveOnly && photo && photoSource === "camera" ? (
-              <View style={styles.liveBadge}>
-                <Ionicons name="shield-checkmark" size={13} color={COLORS.success} />
-                <Text style={styles.liveBadgeText}>Live photo captured in app</Text>
-              </View>
-            ) : null}
-            <ValidationMessage message={fieldErrors.photo} field />
-
-            <Text style={styles.label}>Category</Text>
-            <View style={styles.chips}>
-              {categories.map((item) => (
-                <Chip
-                  key={item.id}
-                  label={item.label}
-                  active={category === item.id}
-                  onPress={() => {
-                    setCategory(item.id);
-                    setFieldErrors((prev) => ({ ...prev, category: "" }));
-                  }}
-                />
-              ))}
-            </View>
-            <ValidationMessage message={fieldErrors.category} field />
-
-            <Field
-              label="Short title"
-              value={title}
-              onChangeText={(text) => {
-                setTitle(text);
-                setFieldErrors((prev) => ({ ...prev, title: "" }));
-              }}
-              placeholder="Black Fastrack watch"
-              autoCapitalize="sentences"
-              error={fieldErrors.title}
-            />
-            <Field
-              label="Details"
-              value={description}
-              onChangeText={(text) => {
-                setDescription(text);
-                setFieldErrors((prev) => ({ ...prev, description: "" }));
-              }}
-              placeholder="Scratches, brand, unique marks"
-              autoCapitalize="sentences"
-              error={fieldErrors.description}
-            />
-
-            <Text style={styles.label}>Location</Text>
-            <View style={styles.chips}>
-              {locations.map((loc) => (
-                <Chip
-                  key={loc}
-                  label={loc}
-                  active={location === loc}
-                  onPress={() => {
-                    setLocation(loc);
-                    setFieldErrors((prev) => ({ ...prev, location: "" }));
-                  }}
-                />
-              ))}
-            </View>
-            <ValidationMessage message={fieldErrors.location} field />
-
-            {mode === "lost" ? (
-              <PremiumSwitch
-                label="Urgent campus alert — pin near top of feed"
-                value={isUrgent}
-                onValueChange={setIsUrgent}
-              />
-            ) : null}
-
-            <ValidationMessage message={formError} />
-
-            <AppButton
-              label={
-                submitting
-                  ? linkingFound || linkingLost
-                    ? "Sending to the other student…"
-                    : "Posting your report…"
-                  : linkingFound
-                    ? "Submit lost claim"
-                    : linkingLost
-                      ? "Notify the owner"
-                      : mode === "lost"
-                        ? "Post lost report"
-                        : "Post found report"
-              }
-              onPress={submit}
-              disabled={submitting}
-              loading={submitting}
-            />
-          </ScreenShell>
-        </KeyboardAwareScrollView>
+                Gallery
+              </Text>
+            </Pressable>
+            <Pressable
+              style={[styles.photoActionBtn, photoSource === "camera" && styles.photoActionActive]}
+              onPress={takePhoto}
+            >
+              <Text
+                style={[
+                  styles.photoActionText,
+                  photoSource === "camera" && styles.photoActionTextActive,
+                ]}
+              >
+                Camera
+              </Text>
+            </Pressable>
+          </>
+        )}
       </View>
-    </ConnectionGate>
+      {photo ? (
+        // Keyed on the pick counter so a replacement image always remounts.
+        <PhotoView
+          key={photoKey}
+          uri={photo.uri}
+          style={[styles.photoPreview, wide && styles.photoDesk]}
+        />
+      ) : (
+        <Pressable
+          onPress={choosePhoto}
+          style={({ pressed }) => [
+            styles.photoBox,
+            wide && styles.photoDesk,
+            fieldErrors.photo ? styles.photoError : null,
+            pressed ? styles.photoBoxPressed : null,
+          ]}
+        >
+          <Ionicons
+            name={cameraOnly ? "camera-outline" : "image-outline"}
+            size={26}
+            color={COLORS.accent}
+          />
+          <Text style={styles.photoHint}>{photoHint}</Text>
+        </Pressable>
+      )}
+      {liveOnly && photo && photoSource === "camera" ? (
+        <View style={styles.liveBadge}>
+          <Ionicons name="shield-checkmark" size={13} color={COLORS.success} />
+          <Text style={styles.liveBadgeText}>Live photo captured in app</Text>
+        </View>
+      ) : null}
+      <ValidationMessage message={fieldErrors.photo} field />
+    </>
+  );
+
+  const categoryPicker = (
+    <>
+      <Text style={styles.label}>Category</Text>
+      <View style={styles.chips}>
+        {categories.map((item) => (
+          <Chip
+            key={item.id}
+            label={item.label}
+            active={category === item.id}
+            onPress={() => {
+              setCategory(item.id);
+              setFieldErrors((prev) => ({ ...prev, category: "" }));
+            }}
+          />
+        ))}
+      </View>
+      <ValidationMessage message={fieldErrors.category} field />
+    </>
+  );
+
+  const detailFields = (
+    <>
+      <Field
+        label="Short title"
+        value={title}
+        onChangeText={(text) => {
+          setTitle(text);
+          setFieldErrors((prev) => ({ ...prev, title: "" }));
+        }}
+        placeholder="Black Fastrack watch"
+        autoCapitalize="sentences"
+        error={fieldErrors.title}
+      />
+      <Field
+        label="Details"
+        value={description}
+        onChangeText={(text) => {
+          setDescription(text);
+          setFieldErrors((prev) => ({ ...prev, description: "" }));
+        }}
+        placeholder="Scratches, brand, unique marks"
+        autoCapitalize="sentences"
+        error={fieldErrors.description}
+      />
+    </>
+  );
+
+  const locationChips = (
+    <>
+      <View style={styles.chips}>
+        {locations.map((loc) => (
+          <Chip
+            key={loc}
+            label={loc}
+            active={location === loc}
+            onPress={() => {
+              setLocation(loc);
+              setFieldErrors((prev) => ({ ...prev, location: "" }));
+            }}
+          />
+        ))}
+      </View>
+      <ValidationMessage message={fieldErrors.location} field />
+    </>
+  );
+
+  const urgentSwitch =
+    mode === "lost" ? (
+      <PremiumSwitch
+        label="Urgent campus alert — pin near top of feed"
+        value={isUrgent}
+        onValueChange={setIsUrgent}
+      />
+    ) : null;
+
+  const submitBlock = (
+    <>
+      <ValidationMessage message={formError} />
+      <AppButton label={submitLabel} onPress={submit} disabled={submitting} loading={submitting} />
+    </>
+  );
+
+  if (wide) {
+    // Same thresholds as validateReport, so the checklist and the submit agree.
+    const checks = [
+      { label: "Photo added", done: Boolean(photo) },
+      { label: "Category chosen", done: Boolean(category) },
+      { label: "Short title", done: title.trim().length >= 3 },
+      { label: "Details", done: description.trim().length >= 8 },
+      { label: "Location", done: Boolean(location) },
+    ];
+    const canSwitchMode = !linkingFound && !linkingLost;
+
+    return (
+      <SidebarShell active="home" loading={loadingMeta} loadingLabel="Preparing report">
+        <ConnectionBanner />
+        <ScrollView contentContainerStyle={styles.deskScroll} showsVerticalScrollIndicator={false}>
+          <View style={styles.deskHeader}>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <View style={styles.eyebrowRow}>
+                <Pressable
+                  onPress={() =>
+                    navigation.canGoBack()
+                      ? navigation.goBack()
+                      : navigation.navigate("MainTabs")
+                  }
+                  style={({ pressed }) => [styles.backPill, pressed && { opacity: 0.7 }]}
+                  accessibilityRole="button"
+                >
+                  <Ionicons name="chevron-back" size={14} color={COLORS.primary} />
+                  <Text style={styles.backPillText}>Back</Text>
+                </Pressable>
+                <Text style={styles.deskEyebrow}>
+                  Lost &amp; Found · {mode === "lost" ? "Lost item" : "Found item"}
+                </Text>
+              </View>
+              <Text style={styles.deskTitle}>{headline}</Text>
+              <Text style={styles.deskSub}>{intro}</Text>
+            </View>
+            {canSwitchMode ? (
+              <ModeToggle mode={mode} onChange={(m) => navigation.setParams({ mode: m })} />
+            ) : null}
+          </View>
+
+          <View style={styles.deskGrid}>
+            <View style={styles.deskColA}>
+              <StepCard step={1} title="Photo" icon="camera-outline" done={checks[0].done}>
+                {liveNote}
+                {photoPicker}
+                <View style={styles.tipRow}>
+                  <Ionicons name="bulb-outline" size={14} color={COLORS.gold} />
+                  <Text style={styles.tipText}>
+                    Whole item, plain background, good light — matching compares photos.
+                  </Text>
+                </View>
+              </StepCard>
+              <StepCard
+                step={3}
+                title={mode === "lost" ? "Where did you lose it?" : "Where did you find it?"}
+                icon="location-outline"
+                done={checks[4].done}
+              >
+                {locationChips}
+              </StepCard>
+            </View>
+
+            <View style={styles.deskColB}>
+              <StepCard
+                step={2}
+                title="About the item"
+                icon="pricetag-outline"
+                done={checks[1].done && checks[2].done && checks[3].done}
+              >
+                {categoryPicker}
+                {detailFields}
+              </StepCard>
+              <NextSteps mode={mode} />
+            </View>
+
+            <View style={styles.deskColC}>
+              {linkedRef}
+              <ReportPreview
+                mode={mode}
+                photoUri={photo?.uri ?? null}
+                title={title}
+                categoryLabel={categories.find((c) => c.id === category)?.label ?? ""}
+                location={location}
+                isUrgent={isUrgent}
+                checks={checks}
+              />
+              {urgentSwitch}
+              <View style={styles.privacyRow}>
+                <Ionicons name="lock-closed-outline" size={13} color={COLORS.textMuted} />
+                <Text style={styles.privacyText}>
+                  Only your VTU ID is public. Your phone is never shared without your OK.
+                </Text>
+              </View>
+              {submitBlock}
+            </View>
+          </View>
+        </ScrollView>
+      </SidebarShell>
+    );
+  }
+
+  return (
+    <SidebarShell active="home">
+      <ConnectionBanner />
+      <KeyboardAwareScrollView bottomOffset={24} keyboardShouldPersistTaps="handled">
+        <ScreenShell title={headline} subtitle={intro}>
+          {linkedRef}
+          {liveNote}
+          {photoPicker}
+          {categoryPicker}
+          {detailFields}
+          <Text style={styles.label}>Location</Text>
+          {locationChips}
+          {urgentSwitch}
+          {submitBlock}
+        </ScreenShell>
+      </KeyboardAwareScrollView>
+    </SidebarShell>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: COLORS.background },
+  deskScroll: {
+    paddingHorizontal: 28,
+    paddingTop: 20,
+    paddingBottom: 20,
+    width: "100%",
+    maxWidth: 1240,
+    alignSelf: "center",
+  },
+  deskHeader: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    justifyContent: "space-between",
+    gap: 16,
+    marginBottom: 18,
+  },
+  eyebrowRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  backPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    paddingVertical: 4,
+    paddingLeft: 6,
+    paddingRight: 10,
+    borderRadius: RADIUS.pill,
+    backgroundColor: COLORS.card,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  backPillText: { fontFamily: FONTS.sansSemi, fontSize: 12.5, color: COLORS.primary },
+  deskEyebrow: {
+    fontFamily: FONTS.sansBold,
+    fontSize: 11,
+    color: COLORS.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  deskTitle: {
+    marginTop: 4,
+    fontFamily: FONTS.display,
+    fontSize: 28,
+    color: COLORS.text,
+    letterSpacing: -0.5,
+  },
+  deskSub: {
+    marginTop: 4,
+    maxWidth: 640,
+    fontFamily: FONTS.sans,
+    fontSize: 13,
+    lineHeight: 19,
+    color: COLORS.textMuted,
+  },
+  deskGrid: { flexDirection: "row", alignItems: "flex-start", gap: 18 },
+  deskColA: { flex: 1.1, minWidth: 0, gap: 18 },
+  deskColB: { flex: 1.3, minWidth: 0, gap: 18 },
+  deskColC: { width: 300, gap: 14 },
+  tipRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 },
+  tipText: { flex: 1, fontFamily: FONTS.sans, fontSize: 11.5, color: COLORS.textMuted },
+  photoDesk: { height: 180 },
+  privacyRow: { flexDirection: "row", alignItems: "flex-start", gap: 6, paddingHorizontal: 2 },
+  privacyText: {
+    flex: 1,
+    fontFamily: FONTS.sans,
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: COLORS.textMuted,
+  },
   foundRef: {
     marginBottom: 14,
     padding: 14,
