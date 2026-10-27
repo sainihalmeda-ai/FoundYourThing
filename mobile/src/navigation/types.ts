@@ -1,3 +1,5 @@
+import type { NavigatorScreenParams } from "@react-navigation/native";
+
 export type MainTabParamList = {
   HomeTab: undefined;
   FeedTab: undefined;
@@ -10,12 +12,10 @@ export type RootStackParamList = {
   Register: undefined;
   Download: undefined;
   Chooser: undefined;
-  MainTabs: undefined;
-  Home: undefined;
+  /** Pass { screen: "FeedTab" } etc. to land on a specific tab. */
+  MainTabs: NavigatorScreenParams<MainTabParamList> | undefined;
   Report: { mode: "lost" | "found"; linkFoundId?: number; linkLostId?: number };
-  Feed: undefined;
   ItemDetail: { itemId: number };
-  Claims: undefined;
   About: undefined;
   Safety: undefined;
   ReportConcern: undefined;

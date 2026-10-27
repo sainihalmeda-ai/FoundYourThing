@@ -200,9 +200,6 @@ export function AppStack() {
         }}
       />
       <Stack.Screen name="ItemDetail" component={ItemDetailScreen} options={{ title: "Item details" }} />
-      <Stack.Screen name="Home" component={HomeScreen} options={{ title: "FoundYourThing" }} />
-      <Stack.Screen name="Feed" component={FeedScreen} options={{ title: "Campus feed" }} />
-      <Stack.Screen name="Claims" component={ClaimsScreen} options={{ title: "Incoming requests" }} />
       <Stack.Screen name="About" component={AboutScreen} options={{ title: "About" }} />
       <Stack.Screen
         name="Safety"

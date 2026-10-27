@@ -152,7 +152,7 @@ export function ItemDetailScreen({ route, navigation }: Props) {
         title="Reports reopened"
         message="Both items are live on the campus feed again so other matches can appear."
         actionLabel="Back to feed"
-        onAction={() => navigation.navigate("Feed")}
+        onAction={() => navigation.navigate("MainTabs", { screen: "FeedTab" })}
         secondaryLabel="Stay on item"
         onSecondary={() => setReopened(false)}
       />
@@ -165,7 +165,7 @@ export function ItemDetailScreen({ route, navigation }: Props) {
         title="Marked returned"
         message="Claim status is done. Contact details are hidden again. Found report stays as campus trust history."
         actionLabel="Back to feed"
-        onAction={() => navigation.navigate("Feed")}
+        onAction={() => navigation.navigate("MainTabs", { screen: "FeedTab" })}
       />
     );
   }

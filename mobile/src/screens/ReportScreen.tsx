@@ -318,7 +318,7 @@ export function ReportScreen({ route, navigation }: Props) {
         actionLabel="View your report"
         onAction={() => navigation.replace("ItemDetail", { itemId: successItemId })}
         secondaryLabel="Back to feed"
-        onSecondary={() => navigation.navigate("Feed")}
+        onSecondary={() => navigation.navigate("MainTabs", { screen: "FeedTab" })}
       />
     );
     return wide ? <SidebarShell active="home">{success}</SidebarShell> : success;

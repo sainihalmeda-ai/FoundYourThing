@@ -104,7 +104,7 @@ export function ClaimNoticeHost() {
     const kind = notice.kind;
     await dismiss();
     if (kind === "incoming") {
-      navigate("Claims");
+      navigate("MainTabs", { screen: "ClaimsTab" });
     } else {
       navigate("ItemDetail", { itemId });
     }

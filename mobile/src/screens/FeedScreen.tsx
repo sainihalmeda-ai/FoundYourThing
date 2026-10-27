@@ -264,7 +264,7 @@ export function FeedScreen() {
                       : "When someone reports a found valuable, it shows here."
                 }
                 actionLabel="Report an item"
-                onAction={() => navigation.navigate("Home")}
+                onAction={() => navigation.navigate("Report", { mode: tab === "found" ? "found" : "lost" })}
                 compact
               />
             )
