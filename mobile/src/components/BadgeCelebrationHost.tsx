@@ -55,16 +55,50 @@ export function BadgeCelebrationHost() {
   };
 
   return (
-    <Modal visible transparent animationType="fade" statusBarTranslucent>
-      <View style={styles.backdrop}>
-        <Celebration
-          key={shown.badge.min}
-          badge={shown.badge}
-          returned={shown.returned}
-          onProfile={() => close(true)}
-          onClose={() => close(false)}
-        />
-      </View>
+    <BadgePopup
+      badge={shown.badge}
+      returned={shown.returned}
+      state="new"
+      onProfile={() => close(true)}
+      onClose={() => close(false)}
+    />
+  );
+}
+
+export type BadgePopupState = "new" | "earned" | "locked";
+
+/**
+ * A tagline in a pop-up: "new" right after it's earned (with the way to the
+ * profile), "earned" or "locked" when tapped on the Profile page.
+ */
+export function BadgePopup({
+  badge,
+  returned,
+  state,
+  onClose,
+  onProfile,
+}: {
+  badge: FinderBadge;
+  returned: number;
+  state: BadgePopupState;
+  onClose: () => void;
+  onProfile?: () => void;
+}) {
+  return (
+    <Modal visible transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
+      <Pressable style={styles.backdrop} onPress={onClose}>
+        {/* Swallow taps on the card itself so only the backdrop closes it. */}
+        <Pressable style={styles.cardSlot} onPress={() => {}}>
+          <Celebration
+            key={`${badge.min}-${state}`}
+            badge={badge}
+            returned={returned}
+            state={state}
+            onProfile={onProfile}
+            onClose={onClose}
+          />
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -75,14 +109,20 @@ const RAYS = 12;
 function Celebration({
   badge,
   returned,
+  state,
   onProfile,
   onClose,
 }: {
   badge: FinderBadge;
   returned: number;
-  onProfile: () => void;
+  state: BadgePopupState;
+  onProfile?: () => void;
   onClose: () => void;
 }) {
+  const locked = state === "locked";
+  // Locked tiers get a grey medal and no confetti.
+  const medalColor = locked ? "#98A2B3" : badge.color;
+  const rayColor = locked ? COLORS.surfaceMuted : badge.tint;
   const card = useRef(new Animated.Value(0)).current;
   const medal = useRef(new Animated.Value(0)).current;
   const wobble = useRef(new Animated.Value(0)).current;
@@ -113,7 +153,7 @@ function Celebration({
       Animated.parallel([
         Animated.spring(medal, { toValue: 1, friction: 4, tension: 70, useNativeDriver: nativeDriver }),
         Animated.timing(burst, {
-          toValue: 1,
+          toValue: locked ? 0 : 1,
           duration: 1300,
           easing: Easing.out(Easing.quad),
           useNativeDriver: nativeDriver,
@@ -137,12 +177,16 @@ function Celebration({
     );
     rays.start();
     return () => rays.stop();
-  }, [card, medal, wobble, burst, text, spin]);
+  }, [card, medal, wobble, burst, text, spin, locked]);
 
-  const next = nextBadge(returned);
   const tier = FINDER_BADGES.findIndex((b) => b.min === badge.min) + 1;
-  const prevMin = badge.min;
+  // Locked: progress toward this tagline. Otherwise: toward the user's next one.
+  const next = locked ? badge : nextBadge(returned);
+  const prevMin = locked ? 0 : (currentBadge(returned)?.min ?? 0);
   const progress = next ? (returned - prevMin) / (next.min - prevMin) : 1;
+  const missing = Math.max(0, badge.min - returned);
+  const eyebrow =
+    state === "new" ? "New tagline unlocked" : state === "earned" ? "Unlocked" : "Locked";
 
   return (
     <Animated.View
@@ -174,7 +218,7 @@ function Celebration({
               key={i}
               style={[
                 styles.ray,
-                { backgroundColor: badge.tint, transform: [{ rotate: `${(360 / RAYS) * i}deg` }] },
+                { backgroundColor: rayColor, transform: [{ rotate: `${(360 / RAYS) * i}deg` }] },
               ]}
             />
           ))}
@@ -206,7 +250,7 @@ function Celebration({
         <Animated.View
           style={[
             styles.medalRing,
-            { borderColor: badge.tint },
+            { borderColor: rayColor },
             {
               transform: [
                 { scale: medal },
@@ -215,8 +259,8 @@ function Celebration({
             },
           ]}
         >
-          <View style={[styles.medal, { backgroundColor: badge.color }]}>
-            <Ionicons name={badge.icon} size={44} color="#fff" />
+          <View style={[styles.medal, { backgroundColor: medalColor }]}>
+            <Ionicons name={locked ? "lock-closed" : badge.icon} size={locked ? 38 : 44} color="#fff" />
           </View>
         </Animated.View>
       </View>
@@ -227,17 +271,23 @@ function Celebration({
           transform: [{ translateY: text.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
         }}
       >
-        <Text style={styles.eyebrow}>New tagline unlocked · Tier {tier} of {FINDER_BADGES.length}</Text>
-        <Text style={[styles.title, { color: badge.color }]}>{badge.title}</Text>
-        <Text style={styles.tagline}>{badge.tagline}</Text>
+        <Text style={styles.eyebrow}>
+          {eyebrow} · Tier {tier} of {FINDER_BADGES.length}
+        </Text>
+        <Text style={[styles.title, { color: medalColor }]}>{badge.title}</Text>
+        <Text style={[styles.tagline, locked && styles.taglineLocked]}>{badge.tagline}</Text>
         <Text style={styles.count}>
-          {returned} item{returned === 1 ? "" : "s"} returned to their owners
+          {locked
+            ? `Return ${missing} more item${missing === 1 ? "" : "s"} to unlock — needs ${badge.min} in total`
+            : state === "earned"
+              ? `Earned at ${badge.min} return${badge.min === 1 ? "" : "s"} · you have ${returned}`
+              : `${returned} item${returned === 1 ? "" : "s"} returned to their owners`}
         </Text>
 
         <View style={styles.nextBox}>
           <View style={styles.nextHead}>
             <Text style={styles.nextLabel}>
-              {next ? `Next: ${next.title}` : "Highest tagline reached"}
+              {locked ? "Your progress" : next ? `Next: ${next.title}` : "Highest tagline reached"}
             </Text>
             {next ? (
               <Text style={styles.nextCount}>
@@ -249,19 +299,27 @@ function Celebration({
             <View
               style={[
                 styles.fill,
-                { width: `${Math.max(4, Math.min(1, progress) * 100)}%`, backgroundColor: badge.color },
+                { width: `${Math.max(4, Math.min(1, progress) * 100)}%`, backgroundColor: medalColor },
               ]}
             />
           </View>
         </View>
 
-        <Pressable style={[styles.primary, { backgroundColor: badge.color }]} onPress={onProfile}>
-          <Ionicons name="person-circle-outline" size={18} color="#fff" />
-          <Text style={styles.primaryText}>See it on my profile</Text>
-        </Pressable>
-        <Pressable style={styles.secondary} onPress={onClose}>
-          <Text style={styles.secondaryText}>Awesome, thanks!</Text>
-        </Pressable>
+        {onProfile ? (
+          <>
+            <Pressable style={[styles.primary, { backgroundColor: badge.color }]} onPress={onProfile}>
+              <Ionicons name="person-circle-outline" size={18} color="#fff" />
+              <Text style={styles.primaryText}>See it on my profile</Text>
+            </Pressable>
+            <Pressable style={styles.secondary} onPress={onClose}>
+              <Text style={styles.secondaryText}>Awesome, thanks!</Text>
+            </Pressable>
+          </>
+        ) : (
+          <Pressable style={[styles.primary, { backgroundColor: medalColor }]} onPress={onClose}>
+            <Text style={styles.primaryText}>{locked ? "Keep returning items" : "Close"}</Text>
+          </Pressable>
+        )}
       </Animated.View>
     </Animated.View>
   );
@@ -276,6 +334,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
   },
+  cardSlot: { width: "100%", maxWidth: 420, alignItems: "stretch" },
   card: {
     width: "100%",
     maxWidth: 420,
@@ -323,6 +382,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     textAlign: "center",
   },
+  taglineLocked: { color: COLORS.textMuted },
   count: { marginTop: 6, fontFamily: FONTS.sans, fontSize: 12.5, color: COLORS.textMuted, textAlign: "center" },
   nextBox: {
     marginTop: 16,

@@ -16,11 +16,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { fetchProfile } from "../api/auth";
 import { resolveImageUrl } from "../api/client";
 import { ConnectionBanner } from "../components/ConnectionBanner";
+import { BadgePopup } from "../components/BadgeCelebrationHost";
 import { ErrorState } from "../components/ErrorState";
 import { HomeButton } from "../components/HomeButton";
 import { SidebarShell } from "../components/SidebarShell";
 import { UserAvatarPlaceholder } from "../components/UserAvatarPlaceholder";
-import { FINDER_BADGES, currentBadge, nextBadge } from "../constants/badges";
+import { FINDER_BADGES, currentBadge, nextBadge, type FinderBadge } from "../constants/badges";
 import { COLORS, FONTS, RADIUS, SHADOW, WIDE_BREAKPOINT } from "../constants/config";
 import { useAuth } from "../context/AuthContext";
 import type { RootStackParamList } from "../navigation/types";
@@ -53,6 +54,8 @@ export function ProfileScreen() {
   const [error, setError] = useState<unknown>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [tab, setTab] = useState<HistoryTab>("returned");
+  // Tagline tapped in the grid or the hero pill — shown in a pop-up.
+  const [openBadge, setOpenBadge] = useState<FinderBadge | null>(null);
 
   const load = useCallback(async () => {
     if (!token) return;
@@ -163,12 +166,22 @@ export function ProfileScreen() {
             </Text>
             {badge ? (
               <View style={styles.taglineWrap}>
-                <View style={[styles.taglinePill, { backgroundColor: badge.tint }]}>
+                <Pressable
+                  onPress={() => setOpenBadge(badge)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${badge.title} tagline`}
+                  style={({ pressed }) => [
+                    styles.taglinePill,
+                    { backgroundColor: badge.tint },
+                    pressed && { opacity: 0.85 },
+                  ]}
+                >
                   <Ionicons name={badge.icon} size={13} color={badge.color} />
                   <Text style={[styles.taglinePillText, { color: badge.color }]}>
                     {badge.title}
                   </Text>
-                </View>
+                  <Ionicons name="chevron-forward" size={12} color={badge.color} />
+                </Pressable>
                 <Text style={styles.taglineText}>{badge.tagline}</Text>
               </View>
             ) : (
@@ -227,12 +240,16 @@ export function ProfileScreen() {
           {FINDER_BADGES.map((b) => {
             const unlocked = returned >= b.min;
             return (
-              <View
+              <Pressable
                 key={b.min}
-                style={[
+                onPress={() => setOpenBadge(b)}
+                accessibilityRole="button"
+                accessibilityLabel={`${b.title} tagline, ${unlocked ? "unlocked" : "locked"}`}
+                style={({ pressed }) => [
                   styles.badgeCard,
                   wide ? styles.badgeCardWide : styles.badgeCardNarrow,
                   !unlocked && styles.badgeLocked,
+                  pressed && { transform: [{ scale: 0.97 }] },
                 ]}
               >
                 <View
@@ -256,7 +273,7 @@ export function ProfileScreen() {
                 <Text style={[styles.badgeReq, unlocked && { color: b.color }]}>
                   {unlocked ? "Unlocked" : `${b.min} ${b.min === 1 ? "return" : "returns"}`}
                 </Text>
-              </View>
+              </Pressable>
             );
           })}
         </View>
@@ -308,7 +325,19 @@ export function ProfileScreen() {
     </>
   );
 
-  return <SidebarShell active="profile">{content}</SidebarShell>;
+  return (
+    <SidebarShell active="profile">
+      {content}
+      {openBadge ? (
+        <BadgePopup
+          badge={openBadge}
+          returned={returned}
+          state={returned >= openBadge.min ? "earned" : "locked"}
+          onClose={() => setOpenBadge(null)}
+        />
+      ) : null}
+    </SidebarShell>
+  );
 }
 
 function StatCard({
