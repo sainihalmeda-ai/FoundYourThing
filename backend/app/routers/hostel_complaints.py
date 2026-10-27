@@ -72,7 +72,7 @@ def complaint_options(current_user: User = Depends(get_current_user)):
     """Hostels, blocks and categories for the form — one source of truth."""
     return HostelComplaintOptions(
         hostels=[
-            HostelOption(id=key, label=h["label"], blocks=h["blocks"])
+            HostelOption(id=key, label=h["label"], group=h["group"], blocks=h["blocks"])
             for key, h in HOSTELS.items()
         ],
         categories=[{"id": k, "label": v} for k, v in HOSTEL_COMPLAINT_CATEGORIES.items()],
@@ -85,7 +85,7 @@ def complaint_options(current_user: User = Depends(get_current_user)):
 @router.post("", response_model=HostelComplaintPublic, status_code=status.HTTP_201_CREATED)
 async def create_complaint(
     hostel: str = Form(...),
-    block: str = Form(...),
+    block: str = Form(""),
     category: str = Form(...),
     description: str = Form(...),
     room: str = Form(""),
@@ -97,8 +97,11 @@ async def create_complaint(
 ):
     if hostel not in HOSTELS:
         raise HTTPException(status_code=400, detail="Choose your hostel.")
-    if block not in HOSTELS[hostel]["blocks"]:
+    blocks = HOSTELS[hostel]["blocks"]
+    if blocks and block not in blocks:
         raise HTTPException(status_code=400, detail="Choose a block in that hostel.")
+    if not blocks:
+        block = ""  # No blocks listed for this hostel yet.
     if category not in HOSTEL_COMPLAINT_CATEGORIES:
         raise HTTPException(status_code=400, detail="Choose what the complaint is about.")
     room = room.strip()

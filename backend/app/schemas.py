@@ -226,6 +226,7 @@ class TeamAccess(BaseModel):
 class HostelOption(BaseModel):
     id: str
     label: str
+    group: Literal["boys", "girls"]
     blocks: list[str]
 
 

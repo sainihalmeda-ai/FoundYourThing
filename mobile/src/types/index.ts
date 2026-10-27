@@ -87,7 +87,8 @@ export type ConcernTeamView = Concern & {
 export type HostelComplaintStatus = "received" | "in_progress" | "resolved";
 
 export type HostelComplaintOptions = {
-  hostels: { id: string; label: string; blocks: string[] }[];
+  /** `blocks` is empty for hostels whose blocks aren't listed yet — no block is asked for. */
+  hostels: { id: string; label: string; group: "boys" | "girls"; blocks: string[] }[];
   categories: { id: string; label: string }[];
   min_words: number;
   max_words: number;

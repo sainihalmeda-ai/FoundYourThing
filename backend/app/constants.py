@@ -35,15 +35,24 @@ CONCERN_CATEGORIES: dict[str, str] = {
     "other": "Other safety concern",
 }
 
-# Hostel complaint box. Hostel names and blocks are placeholders — replace
-# them with the campus's real ones here; the app reads this list from
-# GET /api/hostel-complaints/options, so nothing else needs to change.
+# Hostel complaint box. The app reads this list from
+# GET /api/hostel-complaints/options, so adding a hostel or its blocks here
+# is the only change needed. A hostel with an empty `blocks` list doesn't ask
+# for a block — fill the list in once its block names are known.
+# Keys are stored on complaints, so never rename one; change `label` instead.
 HOSTELS: dict[str, dict] = {
-    "boys_1": {"label": "Boys Hostel 1", "blocks": ["A", "B", "C", "D"]},
-    "boys_2": {"label": "Boys Hostel 2", "blocks": ["A", "B", "C", "D"]},
-    "boys_3": {"label": "Boys Hostel 3", "blocks": ["A", "B", "C"]},
-    "girls_1": {"label": "Girls Hostel 1", "blocks": ["A", "B", "C"]},
-    "girls_2": {"label": "Girls Hostel 2", "blocks": ["A", "B"]},
+    # Boys
+    "prince": {"label": "Prince Hostel", "group": "boys", "blocks": ["A", "B", "C", "D", "E", "F"]},
+    "leaders": {"label": "Leaders Hostel", "group": "boys", "blocks": []},
+    "kings": {"label": "Kings Hostel", "group": "boys", "blocks": []},
+    "lords": {"label": "Lords Hostel", "group": "boys", "blocks": []},
+    "balaji": {"label": "Balaji Hostel", "group": "boys", "blocks": []},
+    "heroes": {"label": "Heroes Hostel", "group": "boys", "blocks": []},
+    "national": {"label": "National Hostel", "group": "boys", "blocks": []},
+    "international": {"label": "International Hostel", "group": "boys", "blocks": []},
+    # Girls
+    "queens": {"label": "Queens Hostel", "group": "girls", "blocks": []},
+    "padmavathi": {"label": "Padmavathi Hostel", "group": "girls", "blocks": []},
 }
 
 HOSTEL_COMPLAINT_CATEGORIES: dict[str, str] = {

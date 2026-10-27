@@ -19,6 +19,7 @@ import { appendImageToFormData } from "../lib/formData";
 import { FieldErrors, hasErrors } from "../lib/validation";
 import { RootStackParamList } from "../navigation/types";
 import { COLORS, FONTS, RADIUS } from "../constants/config";
+import { HOSTEL_GROUPS } from "../constants/hostel";
 import { ApiError, HostelComplaintOptions } from "../types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "HostelComplaintNew">;
@@ -111,7 +112,7 @@ export function HostelComplaintFormScreen({ navigation }: Props) {
   const validate = (): FieldErrors => {
     const errors: FieldErrors = {};
     if (!hostel) errors.hostel = "Choose your hostel.";
-    if (!block) errors.block = "Choose your block.";
+    if (selectedHostel?.blocks.length && !block) errors.block = "Choose your block.";
     if (!category) errors.category = "Choose what the complaint is about.";
     const problem = complaintTextProblem(description, minWords, maxWords);
     if (problem) errors.description = problem;
@@ -159,42 +160,53 @@ export function HostelComplaintFormScreen({ navigation }: Props) {
             subtitle="Goes to the hostel office. Other students can't see it."
           >
             <Text style={styles.label}>Hostel</Text>
-            <View style={styles.chips}>
-              {options.hostels.map((h) => (
-                <Chip
-                  key={h.id}
-                  label={h.label}
-                  active={hostel === h.id}
-                  onPress={() => {
-                    setHostel(h.id);
-                    // A block letter from another hostel isn't valid here.
-                    if (!h.blocks.includes(block)) setBlock("");
-                    clearError("hostel");
-                  }}
-                />
-              ))}
-            </View>
+            {HOSTEL_GROUPS.map((group) => {
+              const hostels = options.hostels.filter((h) => h.group === group.key);
+              if (hostels.length === 0) return null;
+              return (
+                <View key={group.key}>
+                  <Text style={styles.groupLabel}>{group.label}</Text>
+                  <View style={styles.chips}>
+                    {hostels.map((h) => (
+                      <Chip
+                        key={h.id}
+                        label={h.label}
+                        active={hostel === h.id}
+                        onPress={() => {
+                          setHostel(h.id);
+                          // A block letter from another hostel isn't valid here.
+                          if (!h.blocks.includes(block)) setBlock("");
+                          clearError("hostel");
+                          clearError("block");
+                        }}
+                      />
+                    ))}
+                  </View>
+                </View>
+              );
+            })}
             <ValidationMessage message={fieldErrors.hostel} field />
 
-            <Text style={styles.label}>Block</Text>
-            {selectedHostel ? (
-              <View style={styles.chips}>
-                {selectedHostel.blocks.map((b) => (
-                  <Chip
-                    key={b}
-                    label={`Block ${b}`}
-                    active={block === b}
-                    onPress={() => {
-                      setBlock(b);
-                      clearError("block");
-                    }}
-                  />
-                ))}
-              </View>
-            ) : (
-              <Text style={styles.muted}>Choose a hostel first.</Text>
-            )}
-            <ValidationMessage message={fieldErrors.block} field />
+            {/* Blocks appear once a hostel is picked, and only if it has any listed. */}
+            {selectedHostel && selectedHostel.blocks.length > 0 ? (
+              <>
+                <Text style={styles.label}>Block in {selectedHostel.label}</Text>
+                <View style={styles.chips}>
+                  {selectedHostel.blocks.map((b) => (
+                    <Chip
+                      key={b}
+                      label={`Block ${b}`}
+                      active={block === b}
+                      onPress={() => {
+                        setBlock(b);
+                        clearError("block");
+                      }}
+                    />
+                  ))}
+                </View>
+                <ValidationMessage message={fieldErrors.block} field />
+              </>
+            ) : null}
 
             <Field
               label="Room number (optional)"
@@ -325,6 +337,15 @@ const styles = StyleSheet.create({
     color: COLORS.text,
     marginBottom: 8,
     marginTop: 10,
+  },
+  groupLabel: {
+    fontFamily: FONTS.sansBold,
+    fontSize: 10.5,
+    color: COLORS.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginTop: 4,
+    marginBottom: 6,
   },
   muted: {
     fontFamily: FONTS.sans,
